@@ -1,0 +1,665 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Projector × Audio Story Box · 小游戏决策地图</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18243c;
+      --muted: #6d7482;
+      --paper: #f6f0e5;
+      --paper-2: #fffaf0;
+      --night: #10192c;
+      --night-2: #17233b;
+      --line: rgba(24, 36, 60, .14);
+      --accent: #ee5a3a;
+      --accent-soft: #ffe0d3;
+      --gold: #e5ad38;
+      --green: #418269;
+      --blue: #4d79b7;
+      --purple: #7456a5;
+      --shadow: 0 26px 70px rgba(3, 11, 25, .24);
+      font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body { margin: 0; min-height: 100vh; color: var(--ink); background: var(--night); }
+    button, input, select { font: inherit; }
+    button { cursor: pointer; }
+    .shell { min-height: 100vh; background: linear-gradient(180deg, var(--night) 0 430px, var(--paper) 430px 100%); }
+    .hero { position: relative; min-height: 430px; padding: 34px clamp(24px, 5vw, 80px) 70px; overflow: hidden; color: #fff; }
+    .hero::before { content: ""; position: absolute; inset: -160px -80px auto auto; width: 520px; height: 520px; border: 1px solid rgba(255,255,255,.16); border-radius: 50%; box-shadow: 0 0 0 58px rgba(255,255,255,.035), 0 0 0 116px rgba(255,255,255,.025); }
+    .hero::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 92px; background: linear-gradient(180deg, transparent, rgba(238,90,58,.13)); pointer-events: none; }
+    .eyebrow { margin: 0 0 36px; color: #f2b99f; font-size: 12px; font-weight: 800; letter-spacing: .18em; text-transform: uppercase; }
+    h1 { position: relative; z-index: 1; max-width: 940px; margin: 0; font-family: Georgia, "Songti SC", serif; font-size: clamp(40px, 7vw, 84px); font-weight: 500; line-height: .96; letter-spacing: -.035em; }
+    .hero-copy { position: relative; z-index: 1; display: grid; grid-template-columns: minmax(260px, 600px) auto; align-items: end; gap: 42px; margin-top: 34px; }
+    .hero-copy p { margin: 0; color: #cbd3e2; font-size: 16px; line-height: 1.75; }
+    .hero-stats { display: flex; gap: 28px; }
+    .hero-stats div { min-width: 90px; border-left: 1px solid rgba(255,255,255,.24); padding-left: 14px; }
+    .hero-stats strong { display: block; color: #fff5d4; font-family: Georgia, serif; font-size: 34px; line-height: 1; }
+    .hero-stats span { display: block; margin-top: 7px; color: #9ba8bb; font-size: 12px; }
+    .workspace { width: min(1480px, calc(100% - 40px)); margin: -26px auto 0; padding-bottom: 100px; }
+    .controls { position: sticky; z-index: 20; top: 12px; display: grid; gap: 14px; padding: 18px; background: rgba(255,250,240,.93); border: 1px solid rgba(255,255,255,.65); border-radius: 22px; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .control-row { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+    .search { flex: 1 1 260px; min-height: 46px; padding: 0 16px; color: var(--ink); background: rgba(255,255,255,.78); border: 1px solid var(--line); border-radius: 13px; outline: none; }
+    .search:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(238,90,58,.12); }
+    select { min-height: 44px; max-width: 180px; padding: 0 34px 0 12px; color: var(--ink); background: #fffaf2; border: 1px solid var(--line); border-radius: 12px; }
+    .segmented { display: inline-flex; min-height: 44px; padding: 4px; background: #e9e3d9; border-radius: 13px; }
+    .segmented button { min-width: 76px; padding: 8px 12px; border: 0; border-radius: 9px; color: #6c6a68; background: transparent; font-weight: 750; }
+    .segmented button.active { color: #fff; background: var(--ink); box-shadow: 0 4px 12px rgba(24,36,60,.2); }
+    .result-line { display: flex; align-items: center; justify-content: space-between; min-height: 24px; color: var(--muted); font-size: 13px; }
+    .result-line strong { color: var(--ink); }
+    .reset { border: 0; color: var(--accent); background: transparent; font-weight: 800; }
+    .growth { display: grid; grid-template-columns: 1.2fr 2fr; gap: 24px; margin: 58px 0 46px; padding: 28px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .growth h2 { margin: 0 0 8px; font-family: Georgia, "Songti SC", serif; font-size: 30px; font-weight: 500; }
+    .growth p { margin: 0; color: var(--muted); line-height: 1.7; }
+    .growth-path { display: grid; grid-template-columns: repeat(7, auto); align-items: center; justify-content: end; gap: 10px; }
+    .growth-path b { display: grid; place-items: center; min-width: 86px; min-height: 54px; padding: 8px 12px; color: #fff; background: var(--green); border-radius: 50%; font-size: 13px; text-align: center; }
+    .growth-path i { color: var(--accent); font-style: normal; font-weight: 900; }
+    .section-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; margin: 54px 0 18px; }
+    .section-head h2 { margin: 0; font-family: Georgia, "Songti SC", serif; font-size: clamp(30px, 4vw, 48px); font-weight: 500; }
+    .section-head p { max-width: 560px; margin: 0; color: var(--muted); line-height: 1.6; text-align: right; }
+    .map { display: grid; gap: 2px; border-top: 1px solid var(--line); }
+    .lane { display: grid; grid-template-columns: 172px 1fr; min-height: 112px; border-bottom: 1px solid var(--line); }
+    .lane-label { padding: 22px 24px 20px 0; }
+    .lane-label span { display: block; width: 13px; height: 13px; margin-bottom: 12px; border-radius: 50%; background: var(--lane-color); box-shadow: 0 0 0 7px color-mix(in srgb, var(--lane-color) 16%, transparent); }
+    .lane-label h3 { margin: 0; font-size: 16px; }
+    .lane-label small { display: block; margin-top: 6px; color: var(--muted); }
+    .nodes { display: flex; flex-wrap: wrap; align-content: center; gap: 9px; padding: 18px 0 18px 22px; border-left: 1px solid var(--line); }
+    .node { position: relative; min-height: 54px; max-width: 260px; padding: 9px 46px 9px 13px; overflow: hidden; color: var(--ink); background: rgba(255,255,255,.58); border: 1px solid transparent; border-radius: 12px; text-align: left; transition: transform .18s ease, border-color .18s ease, background .18s ease, opacity .18s ease; animation: node-in .38s both; }
+    .node:hover, .node:focus-visible { z-index: 2; transform: translateY(-3px); border-color: var(--lane-color); background: #fff; outline: none; }
+    .node b { display: block; overflow: hidden; font-size: 14px; line-height: 1.25; text-overflow: ellipsis; white-space: nowrap; }
+    .node small { display: block; margin-top: 5px; color: var(--muted); font-size: 11px; }
+    .node .score { position: absolute; top: 9px; right: 9px; display: grid; place-items: center; width: 30px; height: 30px; color: #fff; background: var(--ink); border-radius: 50%; font-size: 11px; font-weight: 900; }
+    .node[data-maturity*="已有"]::after, .node[data-maturity*="可玩"]::after { content: "已有"; position: absolute; right: 7px; bottom: 3px; color: var(--green); font-size: 8px; font-weight: 900; letter-spacing: .08em; }
+    .empty { display: none; padding: 60px 20px; color: var(--muted); text-align: center; }
+    .source-note { margin-top: 58px; padding-top: 26px; border-top: 1px solid var(--line); color: var(--muted); font-size: 13px; line-height: 1.7; }
+    .source-note a { color: var(--ink); }
+    .backdrop { position: fixed; z-index: 49; inset: 0; visibility: hidden; opacity: 0; background: rgba(6,12,25,.5); transition: opacity .22s ease, visibility .22s; }
+    .backdrop.open { visibility: visible; opacity: 1; }
+    .drawer { position: fixed; z-index: 50; top: 0; right: 0; width: min(560px, 94vw); height: 100vh; padding: 28px 30px 46px; overflow-y: auto; transform: translateX(105%); color: var(--ink); background: var(--paper-2); box-shadow: -32px 0 70px rgba(3,11,25,.32); transition: transform .34s cubic-bezier(.22,.8,.24,1); }
+    .drawer.open { transform: translateX(0); }
+    .drawer-top { display: flex; align-items: center; justify-content: space-between; }
+    .drawer-id { color: var(--accent); font-size: 12px; font-weight: 900; letter-spacing: .12em; }
+    .close { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid var(--line); border-radius: 50%; color: var(--ink); background: transparent; font-size: 22px; }
+    .drawer h2 { margin: 38px 0 12px; font-family: Georgia, "Songti SC", serif; font-size: 42px; font-weight: 500; line-height: 1.05; }
+    .pitch { margin: 0 0 24px; color: #4d5667; font-size: 17px; line-height: 1.7; }
+    .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 32px; }
+    .tag { padding: 7px 10px; color: #4f596b; background: #eee7d9; border-radius: 999px; font-size: 11px; font-weight: 750; }
+    .detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1px; margin: 0 -30px; background: var(--line); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .detail-block { min-height: 132px; padding: 22px 30px; background: var(--paper-2); }
+    .detail-block.wide { grid-column: 1 / -1; }
+    .detail-block h3 { margin: 0 0 9px; color: var(--muted); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; }
+    .detail-block p { margin: 0; font-size: 14px; line-height: 1.65; }
+    .score-board { margin-top: 34px; }
+    .score-total { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 20px; }
+    .score-total h3 { margin: 0; font-size: 14px; }
+    .score-total strong { color: var(--accent); font-family: Georgia, serif; font-size: 52px; line-height: 1; }
+    .score-total span { color: var(--muted); font-size: 12px; }
+    .metric { display: grid; grid-template-columns: 84px 1fr 20px; align-items: center; gap: 10px; margin: 11px 0; font-size: 12px; }
+    .metric-track { height: 7px; overflow: hidden; background: #e8dfd0; border-radius: 999px; }
+    .metric-fill { height: 100%; width: 0; background: var(--accent); border-radius: inherit; transition: width .5s ease .12s; }
+    .drawer.open .metric-fill { width: var(--metric); }
+    @keyframes node-in { from { opacity: 0; transform: translateY(7px); } to { opacity: 1; transform: translateY(0); } }
+    @media (max-width: 820px) {
+      .hero-copy { grid-template-columns: 1fr; }
+      .hero-stats { justify-content: flex-start; }
+      .workspace { width: min(100% - 24px, 1480px); }
+      .growth { grid-template-columns: 1fr; }
+      .growth-path { justify-content: start; overflow-x: auto; padding-bottom: 8px; }
+      .section-head { align-items: start; flex-direction: column; }
+      .section-head p { text-align: left; }
+      .lane { grid-template-columns: 120px 1fr; }
+      .node { max-width: 220px; }
+    }
+    @media (max-width: 560px) {
+      .shell { background: linear-gradient(180deg, var(--night) 0 480px, var(--paper) 480px 100%); }
+      .hero { min-height: 480px; padding: 25px 18px 76px; }
+      .eyebrow { margin-bottom: 70px; }
+      h1 { font-size: 46px; }
+      .hero-copy { margin-top: 26px; gap: 26px; }
+      .hero-stats { gap: 12px; }
+      .hero-stats div { min-width: 72px; padding-left: 9px; }
+      .hero-stats strong { font-size: 28px; }
+      .controls { top: 6px; padding: 12px; border-radius: 17px; }
+      .control-row { gap: 7px; }
+      select { flex: 1 1 42%; max-width: none; }
+      .growth { margin-top: 34px; }
+      .growth-path b { min-width: 72px; min-height: 48px; }
+      .lane { display: block; }
+      .lane-label { display: flex; align-items: center; gap: 10px; padding: 20px 0 8px; }
+      .lane-label span { margin: 0; }
+      .lane-label small { margin: 0 0 0 auto; }
+      .nodes { padding: 10px 0 20px; border-left: 0; }
+      .node { flex: 1 1 145px; max-width: none; }
+      .drawer { top: auto; bottom: 0; width: 100%; height: min(88vh, 780px); padding: 22px 22px 42px; border-radius: 24px 24px 0 0; transform: translateY(105%); }
+      .drawer.open { transform: translateY(0); }
+      .drawer h2 { margin-top: 26px; font-size: 35px; }
+      .detail-grid { grid-template-columns: 1fr; margin: 0 -22px; }
+      .detail-block.wide { grid-column: auto; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+    }
+    @media print {
+      .shell { background: #fff; }
+      .hero { min-height: auto; color: var(--ink); background: #fff; }
+      .hero-copy p, .hero-stats span { color: var(--muted); }
+      .hero-stats strong { color: var(--ink); }
+      .controls, .drawer, .backdrop { display: none !important; }
+      .workspace { width: 100%; margin: 0; }
+      .node { break-inside: avoid; border-color: var(--line); }
+    }
+    /* v2: visual decision gallery */
+    .shell { background: var(--paper); }
+    .hero { min-height: 190px; padding: 24px clamp(24px, 4vw, 64px) 28px; background: var(--night); }
+    .hero::before { width: 320px; height: 320px; inset: -150px -40px auto auto; }
+    .eyebrow { margin: 0 0 12px; }
+    h1 { max-width: none; font-size: clamp(34px, 3.25vw, 48px); line-height: 1.04; }
+    .hero-copy { grid-template-columns: minmax(300px, 720px) auto; margin-top: 18px; }
+    .hero-copy p { font-size: 14px; line-height: 1.55; }
+    .hero-stats strong { font-size: 28px; }
+    .workspace { margin-top: -14px; }
+    .controls { gap: 10px; padding: 14px 16px; border-radius: 18px; }
+    .controls select.primary { min-width: 138px; }
+    .advanced-toggle { min-height: 44px; padding: 0 15px; border: 1px solid var(--line); border-radius: 12px; color: var(--ink); background: #fffaf2; font-weight: 750; }
+    .advanced-toggle[aria-expanded="true"] { color: #fff; background: var(--ink); }
+    .advanced-row { display: none; padding-top: 2px; }
+    .advanced-row.open { display: flex; }
+    .capability-note { display: flex; gap: 8px; flex-wrap: wrap; }
+    .capability-note span { padding: 6px 9px; color: #495366; background: rgba(24,36,60,.07); border-radius: 999px; font-size: 11px; font-weight: 750; }
+    .growth { display: none; margin: 24px 0 0; padding: 28px; background: #eef5ec; border: 1px solid rgba(65,130,105,.2); border-radius: 22px; }
+    .growth.open { display: grid; }
+    .section-head { margin: 34px 0 18px; }
+    .section-head h2 { font-size: clamp(30px, 3vw, 42px); }
+    .content-layout { display: grid; grid-template-columns: 176px minmax(0,1fr); gap: 28px; align-items: start; }
+    .category-nav { position: sticky; top: 152px; display: grid; gap: 6px; padding: 10px; background: rgba(255,250,240,.78); border: 1px solid var(--line); border-radius: 18px; backdrop-filter: blur(14px); }
+    .category-nav button { display: flex; align-items: center; justify-content: space-between; min-height: 42px; padding: 9px 10px; border: 0; border-radius: 11px; color: #5d6471; background: transparent; text-align: left; font-size: 13px; font-weight: 760; }
+    .category-nav button:hover, .category-nav button.active { color: #fff; background: var(--ink); }
+    .category-nav em { font-style: normal; opacity: .7; font-size: 11px; }
+    .category-nav .growth-link { margin-top: 6px; color: var(--green); border-top: 1px solid var(--line); border-radius: 0 0 11px 11px; }
+    .gallery-area { min-width: 0; }
+    .map { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 22px; border: 0; }
+    .game-card { position: relative; overflow: hidden; color: var(--ink); background: rgba(255,255,255,.78); border: 1px solid rgba(24,36,60,.11); border-radius: 22px; box-shadow: 0 13px 34px rgba(24,36,60,.09); transition: transform .2s ease, box-shadow .2s ease, border-color .2s ease; }
+    .game-card:hover, .game-card:focus-within { transform: translateY(-4px); border-color: var(--card-color); box-shadow: 0 20px 42px rgba(24,36,60,.15); }
+    .card-open { display: block; width: 100%; padding: 0; color: inherit; background: transparent; border: 0; text-align: left; }
+    .concept { position: relative; aspect-ratio: 16/9; margin: 0; overflow: hidden; background: linear-gradient(135deg,#dbe8ea,#f3dcc6); }
+    .concept img { width: 100%; height: 100%; display: block; object-fit: cover; }
+    .visual-label { position: absolute; top: 10px; padding: 6px 9px; border-radius: 999px; color: #fff; background: rgba(13,23,42,.78); box-shadow: 0 5px 18px rgba(0,0,0,.15); backdrop-filter: blur(8px); font-size: 9px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .visual-label.projector { left: 10px; }
+    .visual-label.box { right: 10px; background: rgba(238,90,58,.86); }
+    .card-body { padding: 17px 18px 64px; }
+    .card-kicker { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--card-color); font-size: 11px; font-weight: 900; letter-spacing: .05em; }
+    .card-score { color: var(--ink); font-size: 12px; }
+    .game-card h3 { margin: 8px 0 7px; font-family: "Iowan Old Style", "Songti SC", serif; font-size: 25px; line-height: 1.08; font-weight: 700; }
+    .card-pitch { min-height: 44px; margin: 0; color: #596170; font-size: 13px; line-height: 1.55; }
+    .card-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+    .card-meta span { padding: 5px 8px; color: #596170; background: #f1ece3; border-radius: 999px; font-size: 10px; font-weight: 750; }
+    .compare-toggle { position: absolute; right: 14px; bottom: 14px; min-width: 42px; min-height: 42px; padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--ink); background: #fff; font-size: 11px; font-weight: 850; box-shadow: 0 5px 18px rgba(24,36,60,.12); }
+    .compare-toggle.selected { color: #fff; background: var(--accent); border-color: var(--accent); }
+    .drawer { width: min(760px, 96vw); padding: 24px 30px 46px; }
+    .drawer-concept { margin: 18px -2px 0; border-radius: 18px; }
+    .drawer h2 { margin-top: 26px; }
+    .compare-bar { position: fixed; z-index: 45; left: 50%; bottom: 18px; display: none; align-items: center; gap: 12px; width: min(760px,calc(100% - 28px)); padding: 10px 12px; transform: translateX(-50%); color: #fff; background: rgba(16,25,44,.94); border: 1px solid rgba(255,255,255,.15); border-radius: 18px; box-shadow: var(--shadow); backdrop-filter: blur(18px); }
+    .compare-bar.open { display: flex; }
+    .compare-selection { display: flex; flex: 1; gap: 8px; min-width: 0; }
+    .compare-chip { display: flex; align-items: center; gap: 7px; min-width: 0; padding: 5px 9px 5px 5px; border-radius: 11px; background: rgba(255,255,255,.09); font-size: 11px; }
+    .compare-chip img { width: 36px; height: 28px; border-radius: 7px; object-fit: cover; }
+    .compare-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .compare-action { min-height: 42px; padding: 0 16px; border: 0; border-radius: 12px; color: #fff; background: var(--accent); font-weight: 850; }
+    .compare-action:disabled { cursor: default; opacity: .55; }
+    .compare-overlay { position: fixed; z-index: 70; inset: 0; display: none; padding: 34px; overflow: auto; background: rgba(7,13,25,.78); backdrop-filter: blur(14px); }
+    .compare-overlay.open { display: block; }
+    .compare-panel { width: min(1180px,100%); margin: 0 auto; padding: 28px; background: var(--paper-2); border-radius: 26px; box-shadow: var(--shadow); }
+    .compare-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+    .compare-head h2 { margin: 0; font-family: "Iowan Old Style", "Songti SC", serif; font-size: 34px; }
+    .compare-grid { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; }
+    .compare-card { min-width: 0; overflow: hidden; background: #fff; border: 1px solid var(--line); border-radius: 18px; }
+    .compare-card img { width: 100%; aspect-ratio: 16/9; display: block; object-fit: cover; }
+    .compare-card-body { padding: 16px; }
+    .compare-card h3 { margin: 0 0 12px; font-size: 21px; }
+    .compare-fact { margin: 12px 0; }
+    .compare-fact b { display: block; margin-bottom: 4px; color: var(--muted); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; }
+    .compare-fact p { margin: 0; font-size: 12px; line-height: 1.5; }
+    .empty { grid-column: 1/-1; }
+    body, button, input, select { font-family: "Avenir Next", "PingFang SC", "Microsoft YaHei", sans-serif; }
+    h1, .hero-stats strong, .growth h2, .section-head h2, .drawer h2 { font-family: "Iowan Old Style", "Songti SC", serif; }
+    @media (max-width: 980px) {
+      .content-layout { grid-template-columns: 1fr; }
+      .category-nav { position: sticky; top: 144px; z-index: 12; display: flex; overflow-x: auto; padding: 8px; }
+      .category-nav button { flex: 0 0 auto; }
+      .category-nav .growth-link { margin: 0 0 0 4px; border-top: 0; border-left: 1px solid var(--line); border-radius: 0 11px 11px 0; }
+    }
+    @media (max-width: 720px) {
+      .hero { min-height: 250px; }
+      .hero-copy { grid-template-columns: 1fr; gap: 12px; }
+      .hero-stats { display: none; }
+      .map { grid-template-columns: 1fr; }
+      .controls select.primary { flex: 1 1 130px; }
+      .compare-grid { grid-template-columns: 1fr; }
+      .compare-overlay { padding: 12px; }
+      .compare-panel { padding: 18px; }
+      .compare-chip span { display: none; }
+    }
+    .language-switch { position: absolute; z-index: 3; top: 22px; right: clamp(18px,4vw,64px); display: inline-flex; padding: 4px; border: 1px solid rgba(255,255,255,.2); border-radius: 999px; background: rgba(255,255,255,.08); backdrop-filter: blur(10px); }
+    .language-switch button { min-width: 52px; min-height: 38px; padding: 0 12px; border: 0; border-radius: 999px; color: #b9c3d4; background: transparent; font-size: 12px; font-weight: 850; }
+    .language-switch button.active { color: var(--night); background: #fff4da; }
+    @media (max-width: 560px) { .language-switch { top: 16px; right: 14px; } .language-switch button { min-width: 46px; } }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="hero">
+      <div class="language-switch" id="languageSwitch" aria-label="Language"><button class="active" data-lang="en">EN</button><button data-lang="zh">中文</button></div>
+      <p class="eyebrow">Product review atlas · 2026.09</p>
+      <h1 id="heroTitle">Minigames belong inside the story—not between chapters.</h1>
+      <div class="hero-copy">
+        <p id="heroDescription">Explore 30 story interactions, 20 standalone games, and one companion-growth layer. Filter by the kind of fun, then compare devices, ages, readiness, and decision scores.</p>
+        <div class="hero-stats" id="heroStats" aria-label="Candidate overview">
+          <div><strong>30</strong><span>Story interactions</span></div>
+          <div><strong>20</strong><span>Standalone games</span></div>
+          <div><strong>8</strong><span>Play patterns</span></div>
+        </div>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <section class="controls" id="filters" aria-label="Game filters">
+        <div class="control-row">
+          <div class="segmented" id="typeTabs" aria-label="Content type">
+            <button class="active" data-value="all">All</button>
+            <button data-value="story">Story interactions</button>
+            <button data-value="standalone">Standalone games</button>
+          </div>
+          <input class="search" id="search" type="search" placeholder="Search games, mechanics, or Nintendo references" aria-label="Search games" />
+          <select class="primary" id="device"></select>
+          <select class="primary" id="age"></select>
+          <button class="advanced-toggle" id="advancedToggle" aria-expanded="false">More filters</button>
+        </div>
+        <div class="control-row advanced-row" id="advancedFilters">
+          <select id="players"></select>
+          <select id="impact"></select>
+          <select id="maturity"></select>
+          <select id="capability"></select>
+        </div>
+        <div class="result-line"><div><span id="resultSummary">Showing <strong id="visibleCount">50</strong> of 50 · Highest scores first</span><div class="capability-note" id="deviceNotes"><span>Projector: full 1024×576 projection</span><span>Audio Story Box: fixed 16×16 matrix</span></div></div><button class="reset" id="reset">Clear filters</button></div>
+      </section>
+
+      <section class="growth" id="growth">
+        <div><h2 id="growthTitle">Companion growth spans every game</h2><p id="growthDescription">The existing bear, rabbit, tiger, camel, and otter companions grow through shared experiences—without hunger meters, daily chores, XP bars, or absence penalties.</p></div>
+        <div class="growth-path" aria-label="伙伴成长路径"><b>故事选择<br />合作行为</b><i>→</i><b>共同经历<br />伙伴记忆</b><i>→</i><b>Meet → Trust<br />→ Resonance</b><i>→</i><b>Guardian<br />新回应</b></div>
+      </section>
+
+      <section class="section-head"><h2 id="galleryTitle">Concept gallery</h2><p id="galleryDescription">Start with the play moment, then inspect implementation readiness. Each concept pairs a full Projector scene with a 16×16 Audio Story Box interpretation.</p></section>
+      <div class="content-layout">
+        <nav class="category-nav" id="categoryNav" aria-label="核心乐趣分类"></nav>
+        <section class="gallery-area">
+          <div class="map" id="map"></div>
+          <div class="empty" id="empty">No games match these filters. Try removing one condition.</div>
+        </section>
+      </div>
+
+      <footer class="source-note" id="sourceNote">
+        This atlas uses public, official Nintendo descriptions as mechanic references only:
+        <a href="https://www.nintendo.com/en-gb/Games/Nintendo-Switch-games/WarioWare-Move-It--2403866.html">《瓦力欧制造》</a>、
+        <a href="https://www.nintendo.com/us/whatsnew/find-your-flow-in-rhythm-heaven-groove/">《节奏天国》</a>、
+        <a href="https://www.nintendo.com/us/store/products/super-mario-party-jamboree-switch/">《超级马力欧派对》</a>、
+        <a href="https://media.nintendo.com/snipperclips/">《你裁我剪！斯尼帕》</a>、
+        <a href="https://www.nintendo.com/en-gb/games/oms/labo/invent.html">《Nintendo Labo》</a>。
+      </footer>
+    </main>
+  </div>
+
+  <div class="backdrop" id="backdrop"></div>
+  <aside class="drawer" id="drawer" aria-hidden="true" aria-label="Game details">
+    <div class="drawer-top"><span class="drawer-id" id="detailId"></span><button class="close" id="close" aria-label="Close details">×</button></div>
+    <figure class="concept drawer-concept"><img id="detailImage" alt="" /><span class="visual-label projector">Projector · 1024×576</span><span class="visual-label box">Audio Box · 16×16</span></figure>
+    <h2 id="detailTitle"></h2>
+    <p class="pitch" id="detailPitch"></p>
+    <div class="tags" id="detailTags"></div>
+    <div class="detail-grid">
+      <div class="detail-block wide"><h3 id="loopHeading">Core loop</h3><p id="detailLoop"></p></div>
+      <div class="detail-block"><h3>Projector</h3><p id="detailProjector"></p></div>
+      <div class="detail-block"><h3 id="boxHeading">Audio Story Box · 16×16</h3><p id="detailBox"></p></div>
+      <div class="detail-block"><h3 id="ageHeading">Age scaling</h3><p id="detailAge"></p></div>
+      <div class="detail-block"><h3 id="replayHeading">Replay variables</h3><p id="detailReplay"></p></div>
+      <div class="detail-block"><h3 id="nintendoHeading">Nintendo reference</h3><p id="detailNintendo"></p></div>
+      <div class="detail-block"><h3 id="changeHeading">Our adaptation</h3><p id="detailChange"></p></div>
+    </div>
+    <section class="score-board">
+      <div class="score-total"><h3 id="scoreHeading">Decision score</h3><div><strong id="detailScore">—</strong><span> / 100</span></div></div>
+      <div id="metrics"></div>
+    </section>
+  </aside>
+
+  <div class="compare-bar" id="compareBar" aria-live="polite"><div class="compare-selection" id="compareSelection"></div><button class="compare-action" id="openCompare">Compare side by side</button></div>
+  <div class="compare-overlay" id="compareOverlay" aria-hidden="true">
+    <section class="compare-panel"><div class="compare-head"><h2 id="compareTitle">Candidate comparison</h2><button class="close" id="closeCompare" aria-label="Close comparison">×</button></div><div class="compare-grid" id="compareGrid"></div></section>
+  </div>
+
+  <script src="assets/atlas-i18n.js"></script>
+  <script>
+    const categories = [
+      ["即时反应", "#ee5a3a", "听到就做"],
+      ["节奏模仿", "#7456a5", "示范与回应"],
+      ["记忆顺序", "#4d79b7", "记住并重现"],
+      ["观察寻找", "#418269", "发现关键线索"],
+      ["解谜推理", "#b47b2a", "理解因果"],
+      ["创造表达", "#c04e78", "没有唯一答案"],
+      ["合作社交", "#368b8d", "沟通与分工"],
+      ["动作竞赛", "#ad493f", "动作与紧张感"]
+    ];
+
+    const items = [
+      {id:"S01",title:"危险口令",type:"story",category:"即时反应",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"概念方案",capability:"当前可做",pitch:"角色突然喊出危险和逃生方向，孩子立即做动作，场景马上演出闪避结果。",loop:"听危险与方向 → 输入 → 漂亮闪避、擦边或滑稽碰撞 → 继续剧情。",projector:"方向键或遥控器倾斜；画面明确显示危险来源。",box16:"旋钮或 Star/Moon；点阵显示大方向箭头，灯环显示安全侧。",ageNote:"低龄单方向；中龄加入假口令；高龄连续两步。",replay:"方向、危险物、时机与角色反应随机。",nintendo:"《瓦力欧制造》：瞬间口令与单动作微游戏。",change:"口令来自角色危机，成功与失误改变对白和场景表演。"},
+      {id:"S02",title:"最后一秒防护",type:"story",category:"即时反应",impact:"场景动作",score:87,ratings:[4,5,4,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"概念方案",capability:"当前可做",pitch:"根据蓄力声按住保护，并在冲击结束后及时松开。",loop:"听蓄力 → 按住 → 承受冲击 → 松开；过早或过晚都有滑稽结果。",projector:"确认键按下/松开，画面展示冲击波。",box16:"按住实体键；灯环向中心收缩提示冲击。",ageNote:"低龄只按住；中高龄加入假冲击和不同蓄力长度。",replay:"冲击长度、假动作和危险来源变化。",nintendo:"《瓦力欧制造》：清晰的按住/松开时机。",change:"动作被解释为保护故事角色，不是抽象时间条。"},
+      {id:"S03",title:"木头人躲藏",type:"story",category:"即时反应",impact:"场景动作",score:88,ratings:[4,5,4,5,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"守卫转身时移动，音乐停或守卫回头时保持不动。",loop:"可移动阶段靠近目标 → 守卫回头 → 三轴判定静止 → 前进或趣味暴露。",projector:"双遥控三轴，可合作也可轻对战。",box16:"机身三轴；点阵显示睁眼/闭眼。",ageNote:"低龄规律停顿；高龄加入假停顿和诱导音。",replay:"音乐、守卫节奏、目标姿势随机。",nintendo:"《大家的 1-2-Switch!》：Statues。",change:"被发现不淘汰，玩家会成为滑稽助手或触发短剧情。"},
+      {id:"S04",title:"接住掉落物",type:"story",category:"即时反应",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"根据角色喊声或画面，把篮子移到正确方向接住剧情道具。",loop:"判断落点 → 移动接取 → 获得完整或变形但仍可用的道具。",projector:"方向键左右移动，支持双人分区。",box16:"旋钮选轨；点阵显示简单下落轨迹。",ageNote:"低龄单物品；高龄真假物品和连续接取。",replay:"落点、物品、速度和角色随机。",nintendo:"《超级马力欧派对》：团队接取型小游戏。",change:"接住的是后续剧情使用的物品，而不是纯分数。"},
+      {id:"S05",title:"紧急修复",type:"story",category:"即时反应",impact:"场景动作",score:91,ratings:[5,5,4,4,4],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"把一次故障拆成连续三秒微任务，边操作边看场景恢复。",loop:"短口令 → 转、按、扶稳 → 局部恢复 → 下一故障。",projector:"方向、按住、动作混合，双人可分工。",box16:"旋钮、Star/Moon 和三轴轮换，图标提示当前任务。",ageNote:"低龄两步；高龄四到六步并减少提示。",replay:"任务顺序、故障组合和角色反应变化。",nintendo:"《瓦力欧制造》：连续微游戏。",change:"同一故事危机串起动作，步骤间有明确因果。"},
+      {id:"S06",title:"暗号敲门",type:"story",category:"节奏模仿",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"门后角色敲出短节奏，孩子用两个音色原样回应。",loop:"听示范 → 回应小节复现 → 开门或听到误会笑点。",projector:"两个方向/确认键对应音色，显示回应拍。",box16:"Star/Moon 双鼓，点阵显示节拍余量。",ageNote:"从 2 拍起步，最高 6 拍。",replay:"音色、长度、速度和门后角色变化。",nintendo:"《节奏天国》：示范—回应。",change:"节奏是故事角色之间的身份暗号。"},
+      {id:"S07",title:"魔法回声",type:"story",category:"节奏模仿",impact:"场景动作",score:91,ratings:[4,5,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"精灵唱出方向和节奏短语，孩子复现后让魔法逐层亮起。",loop:"听短语 → 复现 → 魔法呈现 Perfect、Good 或可爱偏差。",projector:"方向键、按键和动作组合。",box16:"Star/Moon、旋钮与灯环回放序列。",ageNote:"动作种类与序列长度随年龄增长。",replay:"从短语库重组节奏、动作和角色。",nintendo:"《节奏天国》：听觉模仿。",change:"准确度改变故事魔法的形态与角色对白。"},
+      {id:"S08",title:"桥上齐步",type:"story",category:"节奏模仿",impact:"场景动作",score:87,ratings:[4,5,4,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"概念方案",capability:"当前可做",pitch:"按固定拍子走过摇晃桥，失拍时伙伴会互相拉住。",loop:"跟拍 → 桥稳定/摇晃 → 连续走到对岸。",projector:"双人同步或轮流按键，画面显示桥状态。",box16:"Star/Moon 跟拍，点阵显示桥面倾斜。",ageNote:"固定四拍逐步增加停顿与切分。",replay:"桥型、节奏主题、风声和伙伴组合变化。",nintendo:"《节奏天国》：维持稳定脉冲。",change:"节拍表现直接变成团队行走和互救演出。"},
+      {id:"S09",title:"角色合唱",type:"story",category:"节奏模仿",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"概念方案",capability:"当前可做",pitch:"角色唱前半句，孩子在空拍用音色或动作回应。",loop:"角色领唱 → 玩家回应 → 更多角色加入或用跑调接住失误。",projector:"角色轮次可视化，双人负责不同声部。",box16:"点阵头像配合不同音色。",ageNote:"从单音回应到角色分工和交错节拍。",replay:"旋律、角色顺序、回应动作变化。",nintendo:"《节奏天国》：角色节拍喜剧。",change:"合唱结果反映故事人物关系。"},
+      {id:"S10",title:"声音路径",type:"story",category:"记忆顺序",impact:"场景动作",score:91,ratings:[4,5,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"记住森林、河流、钟声等路径音，再按原顺序选择方向。",loop:"听地标声序列 → 重现路线 → 走捷径或趣味绕路。",projector:"同时显示地标和路径。",box16:"灯环方向加地标声，点阵显示箭头。",ageNote:"2–3 个线索起步，高龄增至 6 个。",replay:"路径、地标声和重复声随机。",nintendo:"《脑锻炼学院》：记忆任务。",change:"序列变成可听见、可走过的故事地图。"},
+      {id:"S11",title:"魔法配方",type:"story",category:"记忆顺序",impact:"场景动作",score:91,ratings:[4,5,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"记住巫师加入材料的顺序，再亲手重做配方。",loop:"观察/听材料 → 顺序输入 → 目标药剂或滑稽副产品。",projector:"看图选择材料并确认。",box16:"旋钮选材料，点阵显示大图标。",ageNote:"两种材料起步，高龄加入数量与倒序。",replay:"配方、材料、顺序和失败效果变化。",nintendo:"《脑锻炼学院》：记忆与分析。",change:"每种错误配方也有故事结果。"},
+      {id:"S12",title:"谁说过这句话",type:"story",category:"记忆顺序",impact:"场景动作",score:87,ratings:[4,5,4,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"概念方案",capability:"当前可做",pitch:"从刚发生过的对白中找出真正说话的角色。",loop:"听对白片段 → 浏览候选 → 判断 → 获得线索或角色纠正。",projector:"选择角色卡并回看场景。",box16:"旋钮浏览点阵头像，播放声音样本。",ageNote:"两选一起步，高龄加入语气、动机和相似声线。",replay:"对白、角色组合和线索价值变化。",nintendo:"《脑锻炼学院》：快速辨认。",change:"答案来自刚才的故事注意力，不是无关知识题。"},
+      {id:"S13",title:"倒序机关",type:"story",category:"记忆顺序",impact:"场景动作",score:83,ratings:[4,4,5,3,5],age:["6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"机关播放一串动作，孩子从最后一个开始反向输入。",loop:"看/听序列 → 倒序操作 → 时间倒转或滑稽倒放。",projector:"方向与确认序列，画面倒放。",box16:"Star/Moon/旋钮输入 3–4 步。",ageNote:"6–8 岁 3 步；9–12 岁 4–6 步。",replay:"动作、长度、干扰声和倒放效果变化。",nintendo:"《脑锻炼学院》：工作记忆。",change:"倒序输入被解释成时间魔法。"},
+      {id:"S14",title:"寻找发声者",type:"story",category:"观察寻找",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"根据叫声和语气找出真正需要帮助的角色。",loop:"听呼救 → 比较候选 → 选择 → 救援或遇到短笑点。",projector:"选择画面中的藏身位置。",box16:"旋钮切角色，点阵显示头像。",ageNote:"候选从 2 个增至 5 个，线索逐步间接。",replay:"声音、角色、藏身处和误导者变化。",nintendo:"《脑锻炼学院》：快速辨认。",change:"声音身份判断直接驱动救援。"},
+      {id:"S15",title:"影子里是谁",type:"story",category:"观察寻找",impact:"场景动作",score:85,ratings:[4,5,4,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"根据像素轮廓、脚步和习惯声判断影子属于谁。",loop:"看轮廓/听声音 → 判断 → 角色现身或制造叠影误会。",projector:"完整剪影和场景光源变化。",box16:"显示角色关键轮廓，声音补足细节。",ageNote:"从差异明显到相似轮廓和声音干扰。",replay:"角色、轮廓角度、姿势和声音组合变化。",nintendo:"《脑锻炼学院》：视觉辨认。",change:"声音成为低分辨率屏幕的必要协作通道。"},
+      {id:"S16",title:"找出不一样",type:"story",category:"观察寻找",impact:"场景动作",score:91,ratings:[4,5,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"一组声音或画面中有一个细节不同，找出伪装者。",loop:"连续观察/聆听 → 选择异常项 → 揭穿伪装或由伙伴提示。",projector:"比较图形、动作和颜色。",box16:"比较音色/节奏，点阵标候选编号。",ageNote:"差异从明显变细微，候选从 3 个增至 6 个。",replay:"声音、图案、位置和差异规则变化。",nintendo:"《脑锻炼学院》：辨认与分析。",change:"异常项对应剧情中的伪装角色。"},
+      {id:"S17",title:"追踪脚印",type:"story",category:"观察寻找",impact:"场景动作",score:87,ratings:[4,5,4,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"根据脚步数量、方向和轻重判断角色去了哪里。",loop:"听/看轨迹 → 数量与方向判断 → 追上目标或发现误导动物。",projector:"显示交叉脚印轨迹。",box16:"脚步声、灯环方向和点阵计数。",ageNote:"低龄数数量，高龄判断交叉路线和步幅。",replay:"轨迹、角色、脚步音和误导组合变化。",nintendo:"《脑锻炼学院》：计数与分析。",change:"抽象计数变成连续追踪剧情。"},
+      {id:"S18",title:"选择正确工具",type:"story",category:"解谜推理",impact:"场景动作",score:90,ratings:[4,5,4,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"从少量工具中选择并执行使用动作，解决角色眼前的问题。",loop:"理解问题 → 浏览工具 → 选择/使用 → 有效或滑稽结果。",projector:"看图选择并用动作使用。",box16:"旋钮浏览、语音读名、按下确认。",ageNote:"明显功能对应逐步增加组合和资源限制。",replay:"工具池、问题、组合和失败效果变化。",nintendo:"《脑锻炼学院》：逻辑选择。",change:"每个选项都有合理故事反馈，可再次尝试。"},
+      {id:"S19",title:"岔路迷宫",type:"story",category:"解谜推理",impact:"路线分支",score:89,ratings:[4,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"根据故事线索连续选择岔路，进入不同小事件。",loop:"获取环境线索 → 选路 → 经历事件 → 汇合或抵达不同场景。",projector:"沿可见路径移动焦点。",box16:"环境声、灯环方向和大箭头。",ageNote:"两岔口起步，高龄加入单向门和记忆地标。",replay:"地图、线索、事件和捷径变化。",nintendo:"《超级马力欧派对》：棋盘路线选择。",change:"路线带来短故事分支，不做资源博弈。"},
+      {id:"S20",title:"平衡吊桥",type:"story",category:"解谜推理",impact:"路线分支",score:89,ratings:[4,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"根据风向和伙伴位置微调平衡，选择不同方式过桥。",loop:"感受重心 → 倾斜校正 → 平稳、摇晃或绕路通过。",projector:"遥控器三轴，双人可控制两侧。",box16:"机身三轴，灯环/点阵显示重心。",ageNote:"单轴校正逐步增加移动重量和阵风。",replay:"风向、队员位置、桥型和通过路线变化。",nintendo:"《Nintendo Switch 运动》：直觉动作映射。",change:"平衡结果决定故事路线而不是只给分。"},
+      {id:"S21",title:"三扇逻辑门",type:"story",category:"解谜推理",impact:"路线分支",score:86,ratings:[4,5,5,3,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"三扇门给出真假线索，找出最符合当前故事条件的一扇。",loop:"听线索 → 排除 → 选择门 → 进入对应短事件。",projector:"同时显示门、线索与角色。",box16:"旋钮切门，点阵显示门的符号。",ageNote:"颜色声音匹配逐步升级为真假与排除。",replay:"线索规则、门后事件和答案变化。",nintendo:"《脑锻炼学院》：分析推理。",change:"错误门也是可探索支线，不是失败页。"},
+      {id:"S22",title:"给夜空上色",type:"story",category:"创造表达",impact:"路线分支",score:89,ratings:[4,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"选择颜色、节奏或动作，为下一幕创造不同夜空。",loop:"选择创作元素 → 即时预览 → 完成 → 下一幕沿用作品。",projector:"可见画布、颜色和动作笔刷。",box16:"旋钮选色、按键点亮，显示简单星座。",ageNote:"自由选择逐步增加主题和节奏约束。",replay:"颜色、笔刷、音乐和角色回应组合变化。",nintendo:"《Nintendo Labo》：输入—输出创造。",change:"作品被故事记住并改变后续环境。"},
+      {id:"S23",title:"模仿小怪兽",type:"story",category:"创造表达",impact:"路线分支",score:95,ratings:[5,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"小怪兽做声音或动作，孩子模仿后看它夸张升级。",loop:"观察/听动作 → 模仿 → 怪兽判断并回应 → 新动作。",projector:"三轴遥控和按键，画面表现身体动作。",box16:"机身三轴、Star/Moon 和表情点阵。",ageNote:"一拍动作逐步升级为组合、强弱和角色分工。",replay:"怪兽性格、动作、节奏和回应变化。",nintendo:"《1-2-Switch》与《瓦力欧制造》：面对面表演、姿势微游戏。",change:"模仿结果改变怪兽与玩家的关系。"},
+      {id:"S24",title:"编一段胜利曲",type:"story",category:"创造表达",impact:"路线分支",score:88,ratings:[4,5,5,3,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"选择少量音符和鼓点，让角色演奏本章专属胜利曲。",loop:"选择/录入 → 回放调整 → 角色演奏 → 后续故事引用。",projector:"可见节拍轨道与角色乐队。",box16:"Star/Moon 录入，旋钮选择，显示 4–6 格节拍。",ageNote:"模板选择逐步升级为自由编排与多人声部。",replay:"音色、速度、节奏和角色编制变化。",nintendo:"《Nintendo Labo》：钢琴与输入输出组合。",change:"创作成为章节记忆，不是一次性音乐玩具。"},
+      {id:"S25",title:"同步拉绳",type:"story",category:"合作社交",impact:"路线分支",score:95,ratings:[5,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["coop"],maturity:"新想法",capability:"能力扩展",pitch:"两名玩家同步朝相反方向拉动，把角色或物体救上来。",loop:"听节拍 → 同步拉 → 保持张力 → 完成救援。",projector:"双遥控器同步方向或倾斜。",box16:"两人分持 Star/Moon 侧输入；并发能力需验证。",ageNote:"固定节拍逐步加入交替、力度和假松动。",replay:"节奏、救援物、重量和突发事件变化。",nintendo:"《你裁我剪！斯尼帕》：沟通合作。",change:"用同步时机替代复杂形状操作。"},
+      {id:"S26",title:"你说我做",type:"story",category:"合作社交",impact:"路线分支",score:97,ratings:[5,5,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["coop"],maturity:"新想法",capability:"当前可做",pitch:"一人获得线索但不能操作，另一人根据描述完成任务。",loop:"分配观察者/行动者 → 描述 → 操作 → 看沟通造成的故事结果。",projector:"双遥控分角色，信息可在画面分区呈现。",box16:"私密播报后传递设备，点阵隐藏答案。",ageNote:"颜色方向逐步增加禁止词与组合指令。",replay:"角色、线索、限制词和分工随机。",nintendo:"《1-2-Switch》：看彼此而不是一直看屏幕。",change:"沟通方式和误会本身就是剧情表演。"},
+      {id:"S27",title:"信号接力",type:"story",category:"合作社交",impact:"关键结果",score:95,ratings:[5,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["coop"],maturity:"新想法",capability:"当前可做",pitch:"玩家依次接收、记住并传出信号，最后一人启动救援机关。",loop:"接收 → 记忆 → 传递 → 最终执行 → 按信息完整度结算。",projector:"当前双人轮流，未来可扩展更多输入。",box16:"家庭轮流持机，显示当前接力位。",ageNote:"2 人 3 步起步，高龄增加干扰与角色限制。",replay:"信号、顺序、玩家角色和干扰变化。",nintendo:"《大家的 1-2-Switch!》：团队传递。",change:"团队准确度映射到救援结局。"},
+      {id:"S28",title:"故事追逐战",type:"story",category:"动作竞赛",impact:"关键结果",score:95,ratings:[5,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop","versus"],maturity:"已有赛车基础",capability:"当前可做",pitch:"角色自动前进，玩家根据提示闪避、跳跃和选择捷径。",loop:"听/看提示 → 动作判定 → 改变相对位置 → 追上、并肩或稍晚到达。",projector:"方向、按键与动作；可双人竞速。",box16:"旋钮、按键和点阵赛道，准确度决定结果。",ageNote:"提示提前量、障碍密度和假提示递增。",replay:"Seed 决定事件、对手、方向和捷径。",nintendo:"《马力欧卡丁车》：简单操作、新手容错与追赶感。",change:"自动巡航，听觉操作准确度而非持续油门决定结果。"},
+      {id:"S29",title:"首领弱点战",type:"story",category:"动作竞赛",impact:"关键结果",score:92,ratings:[5,5,5,3,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"长期方向",pitch:"观察首领的声音和动作规律，在正确窗口用对应能力回应。",loop:"识别规律 → 等待窗口 → 使用动作/能力 → 进入下一阶段。",projector:"可见多阶段首领和双人分工。",box16:"声音主导，点阵表情和灯环提示窗口。",ageNote:"一条规律逐步增加多阶段、假动作与角色分工。",replay:"弱点顺序、攻击节奏和结局方式变化。",nintendo:"任天堂首领战的清晰规律与《超级马力欧派对》的短规则组合。",change:"可通过安抚、智取或击退收束，不以消灭为唯一结果。"},
+      {id:"S30",title:"宝藏争夺",type:"story",category:"动作竞赛",impact:"关键结果",score:95,ratings:[5,5,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["coop","versus"],maturity:"新想法",capability:"长期方向",pitch:"在限时内找线索、避陷阱，并决定共享还是争抢宝藏。",loop:"探索 → 风险选择 → 收集 → 团队决定 → 故事结局。",projector:"双人合作或轻对抗，地图可见。",box16:"轮流回合、声音寻宝和灯环进度。",ageNote:"共享目标逐步增加风险路线和隐藏信息。",replay:"地图、线索、宝藏效果与合作关系变化。",nintendo:"《超级马力欧派对》：短局资源竞争。",change:"加入合作决定，取消淘汰并影响伙伴关系。"},
+      {id:"G01",title:"Magic Orchard 魔法果园",type:"standalone",category:"动作竞赛",impact:"独立游戏",score:86,ratings:[5,3,5,5,3],age:["3-5","6-8","9-12"],device:["projector"],players:["coop"],maturity:"可玩 HTML 原型",capability:"当前可做",pitch:"多人移动篮子接果实、避坏果，共同维持团队 Combo。",loop:"左右移动 → 接普通/金色果实 → 避坏果 → 团队三星结算。",projector:"已有 2–4 人键盘模拟；当前硬件按双 BLE 遥控实现。",box16:"可简化为旋钮选轨，但不是首选平台。",ageNote:"减少轨道与坏果，逐步增加落速和伙伴能力。",replay:"掉落序列、伙伴组合、目标和节奏变化。",nintendo:"《超级马力欧派对》：团队收集。",change:"共享 Combo、伙伴能力和故事奖励取代个人淘汰。"},
+      {id:"G02",title:"Riverlight Rhythm 河光节奏",type:"standalone",category:"节奏模仿",impact:"独立游戏",score:85,ratings:[5,3,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"可玩 HTML 原型",capability:"当前可做",pitch:"系统演奏节奏短语，玩家轮流接拍，共同保持河流光带。",loop:"听示范 → 轮流回应 → Perfect/Good/Miss → 团队光带变化。",projector:"已有 HTML 玩法和伙伴能力。",box16:"Star/Moon、灯环与简单节拍格。",ageNote:"速度、短语长度、轮流方式递增。",replay:"曲目、节奏、玩家顺序和伙伴能力变化。",nintendo:"《节奏天国》：听觉节拍。",change:"加入多人轮流、共享光带和伙伴协作。"},
+      {id:"G03",title:"Ear Racer 声音赛车",type:"standalone",category:"动作竞赛",impact:"独立游戏",score:80,ratings:[5,2,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","versus"],maturity:"已有 Audio 原型",capability:"当前可做",pitch:"自动巡航，听方向提示避障、收星，集满后按 GO 使用一次 Boost。",loop:"提示 → 避障/收星 → Boost → 准确度换算名次。",projector:"补充赛道画面与双人对战。",box16:"已有音频规则；点阵显示赛道与位置，灯环显示进度。",ageNote:"调整提示提前量、事件密度与假提示。",replay:"Seed 决定事件、方向、对手和障碍。",nintendo:"《马力欧卡丁车》：新手容错和翻盘期待。",change:"不用持续油门，听提示的准确度决定名次。"},
+      {id:"G04",title:"Candy Drum Party",type:"standalone",category:"节奏模仿",impact:"独立游戏",score:85,ratings:[5,2,5,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"已有 Audio 原型",capability:"当前可做",pitch:"音乐中先播放鼓句，孩子在回应小节用 Star/Moon 原样敲回。",loop:"教学 → Count-in → 示范小节 → 回应小节 → 整曲结算。",projector:"显示动物乐队与多人声部。",box16:"已有双鼓输入与节拍反馈。",ageNote:"单击、双击、三击和更长短语递增。",replay:"音乐、鼓句、速度和角色声部变化。",nintendo:"《节奏天国》：示范—回应。",change:"使用持续音乐、实体双鼓和儿童乐队主题。"},
+      {id:"G05",title:"三秒大乱斗",type:"standalone",category:"即时反应",impact:"独立游戏",score:88,ratings:[5,3,5,5,4],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop","versus"],maturity:"新想法",capability:"能力扩展",pitch:"连续出现摇、停、转、按等三秒微任务，完成后立刻换题。",loop:"一词规则 → 三秒动作 → 笑点反馈 → 下一题。",projector:"方向、确认和三轴动作混合。",box16:"旋钮、Star/Moon、点阵图标和三轴。",ageNote:"动作池从 4 种扩展到组合与反口令。",replay:"题库、速度、角色和顺序随机。",nintendo:"《瓦力欧制造》：高速微游戏。",change:"全部任务围绕自有硬件动作与伙伴角色。"},
+      {id:"G06",title:"冰冻巡逻队",type:"standalone",category:"即时反应",impact:"独立游戏",score:86,ratings:[5,3,5,5,3],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop","versus"],maturity:"新想法",capability:"能力扩展",pitch:"音乐响时移动，音乐停时立刻保持不动。",loop:"移动 → 音乐停 → 三轴静止判定 → 安全或变成滑稽助手。",projector:"双遥控三轴，画面展示守卫。",box16:"机身三轴，点阵显示睁眼/闭眼。",ageNote:"规律停顿逐步加入假停顿和姿势任务。",replay:"歌曲、守卫、停顿和角色身份变化。",nintendo:"《大家的 1-2-Switch!》：Statues。",change:"被发现不淘汰，而是转换团队角色。"},
+      {id:"G07",title:"气球救援队",type:"standalone",category:"合作社交",impact:"独立游戏",score:83,ratings:[5,3,5,4,3],age:["3-5","6-8","9-12"],device:["projector","box"],players:["coop"],maturity:"新想法",capability:"能力扩展",pitch:"合作输入气量，把气球吹到目标大小但不能吹爆。",loop:"轮流/同步加气 → 看压力 → 应对漏气与风 → 抵达目标。",projector:"双遥控按住或动作输入。",box16:"旋钮加气、Star/Moon 放气，点阵显示大小。",ageNote:"宽容区逐步缩小，并加入不同形状和风。",replay:"目标大小、形状、风和漏气事件随机。",nintendo:"《大家的 1-2-Switch!》：Balloons。",change:"从相互试探改为共同完成救援。"},
+      {id:"G08",title:"方向道场",type:"standalone",category:"即时反应",impact:"独立游戏",score:84,ratings:[4,3,5,5,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","versus"],maturity:"输入基础",capability:"当前可做",pitch:"快速识别方向，逐步加入假动作、反转和连续两步。",loop:"口令 → 输入 → 教练演出正确/错误动作 → 下一题。",projector:"四方向键与双人轮流。",box16:"旋钮、Star/Moon 与灯环方向。",ageNote:"左右起步，扩展到四向、真假与反向规则。",replay:"口令、节奏、规则修饰和角色随机。",nintendo:"《瓦力欧制造》：单动作识别。",change:"同时作为其他游戏的通用动作教学。"},
+      {id:"G09",title:"节拍魔法战",type:"standalone",category:"节奏模仿",impact:"独立游戏",score:87,ratings:[5,3,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"听怪物的节奏弱点，在空拍用正确音色施法。",loop:"怪物出招 → 找空拍 → 输入音色 → 魔法命中或变成滑稽物品。",projector:"显示怪物动作和双人分工。",box16:"Star/Moon、灯环和大表情。",ageNote:"节奏长度、速度和假重拍递增。",replay:"怪物、弱点、曲目和结局变化。",nintendo:"《节奏天国》：Beatspell。",change:"双音色、角色反应和非暴力结局。"},
+      {id:"G10",title:"动物乐团",type:"standalone",category:"节奏模仿",impact:"独立游戏",score:81,ratings:[4,3,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"输入基础",capability:"当前可做",pitch:"每名玩家负责一个动物声部，在正确拍点加入、停下或接替。",loop:"听音乐 → 等待声部入口 → 演奏 → 完成整首短曲。",projector:"双人分声部，舞台反馈音乐厚度。",box16:"Star/Moon 双音色，点阵显示当前角色。",ageNote:"固定入口逐步增加交错节奏和角色轮换。",replay:"歌曲、编制、声部和玩家分工变化。",nintendo:"《节奏天国》：音乐内规则。",change:"多人表现实时混入完整音乐，不逐拍打断评价。"},
+      {id:"G11",title:"声音列车",type:"standalone",category:"记忆顺序",impact:"独立游戏",score:81,ratings:[4,3,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"每到一站增加一节声音车厢，孩子重放不断增长的序列。",loop:"听车厢声 → 复现 → 增加一节 → 到下一站。",projector:"显示车厢角色和序列位置。",box16:"音色为主，点阵显示 4–6 节车厢。",ageNote:"2 项起步，逐步增至 8 项并加入重复声。",replay:"声音、车厢、顺序、站点和规则变化。",nintendo:"《脑锻炼学院》：记忆任务。",change:"用可成长的列车表现工作记忆。"},
+      {id:"G12",title:"倒放实验室",type:"standalone",category:"记忆顺序",impact:"独立游戏",score:76,ratings:[4,3,5,3,4],age:["6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"把听到或看到的实验步骤从最后一步开始反向操作。",loop:"观察步骤 → 倒序输入 → 机器复原 → 看完整倒放结果。",projector:"画面倒放与方向/确认序列。",box16:"声音倒放和 3–4 步点阵序列。",ageNote:"面向 6–12 岁，逐步增加长度和干扰项。",replay:"动作、长度、材料和倒放效果变化。",nintendo:"《脑锻炼学院》：反向处理。",change:"抽象记忆变成可见、可听的因果实验。"},
+      {id:"G13",title:"像素图案接力",type:"standalone",category:"记忆顺序",impact:"独立游戏",score:85,ratings:[5,3,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"图案短暂闪现，玩家轮流复现一部分，合起来完成整幅图。",loop:"看图 → 记忆分段 → 轮流输入 → 合成作品。",projector:"显示大图并给双人分区。",box16:"支持 4–6 步方向路径和大轮廓。",ageNote:"方向路径逐步增加对称、旋转和缺失像素。",replay:"图案程序生成，玩家分段和变换规则变化。",nintendo:"《脑锻炼学院》：记忆与视觉化。",change:"多人共同完成，并突出点阵硬件特色。"},
+      {id:"G14",title:"小小声音侦探",type:"standalone",category:"观察寻找",impact:"独立游戏",score:86,ratings:[4,4,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"听现场声音、角色证词和物品声，推理发生了什么。",loop:"收集三条线索 → 比较 → 判断 → 新证据帮助修正。",projector:"看场景细节并选择证物。",box16:"声音主导，点阵显示证物编号和轮廓。",ageNote:"声音匹配逐步增加时间、动机和矛盾证词。",replay:"案件、证词、线索组合和真相变化。",nintendo:"《脑锻炼学院》：辨认与分析。",change:"包装成可重复的声音推理案件。"},
+      {id:"G15",title:"影子捉迷藏",type:"standalone",category:"观察寻找",impact:"独立游戏",score:84,ratings:[4,4,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","versus"],maturity:"新想法",capability:"能力扩展",pitch:"追踪角色在多个影子间的快速交换，再用声音确认。",loop:"观察交换 → 记住位置 → 选择影子 → 角色探头反馈。",projector:"多影子、遮挡和快速交换。",box16:"2–3 个大轮廓配合声音。",ageNote:"交换速度、候选数量和遮挡递增。",replay:"角色、路线、速度和声音线索变化。",nintendo:"《脑锻炼学院》：辨认与视觉追踪。",change:"声音成为低分辨率环境的确认通道。"},
+      {id:"G16",title:"宝藏雷达",type:"standalone",category:"观察寻找",impact:"独立游戏",score:85,ratings:[5,3,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop"],maturity:"新想法",capability:"能力扩展",pitch:"转动或倾斜设备，根据反馈强弱找到隐藏宝藏。",loop:"扫描 → 接近反馈增强 → 排除假信号 → 定位宝藏。",projector:"遥控器三轴定位，画面显示波纹。",box16:"机身三轴、灯环和大雷达点。",ageNote:"单目标逐步增加多目标、移动和干扰源。",replay:"位置、移动模式、线索和假信号变化。",nintendo:"《Nintendo Labo》：传感器输入—规则—反馈。",change:"把声音、灯光和点阵组合成无摄像头寻宝。"},
+      {id:"G17",title:"故事修理站",type:"standalone",category:"解谜推理",impact:"独立游戏",score:85,ratings:[5,4,5,3,3],age:["3-5","6-8","9-12"],device:["projector"],players:["coop"],maturity:"新想法",capability:"能力扩展",pitch:"两名玩家控制不同部件，通过沟通修好桥、机器或图案。",loop:"理解目标 → 分工操纵 → 尝试组合 → 接受多种可行解。",projector:"双遥控最完整，可同时控制不同部件。",box16:"轮流控制，适合极简方向拼接。",ageNote:"明确轮廓逐步增加工具和空间限制。",replay:"目标、部件、限制和可行解变化。",nintendo:"《你裁我剪！斯尼帕》：开放合作解法。",change:"部件来自故事世界，怪异但可用的方案也能过关。"},
+      {id:"G18",title:"魔法配方实验室",type:"standalone",category:"解谜推理",impact:"独立游戏",score:86,ratings:[4,4,5,4,5],age:["3-5","6-8","9-12"],device:["projector","box","both"],players:["solo","coop"],maturity:"新想法",capability:"当前可做",pitch:"根据客人需求和材料性质，推理并调配合适配方。",loop:"读需求 → 比较材料 → 组合 → 看最佳或奇怪结果。",projector:"完整显示属性、材料与顾客。",box16:"语音说明、旋钮选择和大图标。",ageNote:"颜色声音匹配逐步增加排除条件和有限材料。",replay:"顾客、条件、材料和结果组合变化。",nintendo:"《脑锻炼学院》：分析。",change:"答案扩展为多种有趣结果和可收藏配方。"},
+      {id:"G19",title:"暗号接力赛",type:"standalone",category:"合作社交",impact:"独立游戏",score:90,ratings:[5,4,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["coop"],maturity:"新想法",capability:"当前可做",pitch:"两名玩家轮流接收和传递短暗号，保持信息不失真。",loop:"接收 → 记忆 → 传递 → 比较原始与最终暗号。",projector:"双遥控分角色，画面按玩家隐藏信息。",box16:"家庭轮流持机，灯环隐藏答案。",ageNote:"方向动物声逐步增加节奏、顺序和限制词。",replay:"暗号程序生成，角色和限制变化。",nintendo:"《大家的 1-2-Switch!》：团队游戏。",change:"每名玩家持续有任务，不等待淘汰。"},
+      {id:"G20",title:"动作派对杯",type:"standalone",category:"动作竞赛",impact:"独立游戏",score:85,ratings:[5,3,5,4,4],age:["3-5","6-8","9-12"],device:["projector","box"],players:["solo","coop","versus"],maturity:"新想法",capability:"长期方向",pitch:"连续完成倾斜、摇动、停住和方向短项目，累计团队奖杯。",loop:"动作示范 → 10–20 秒项目 → 趣味称号 → 下一项目。",projector:"双遥控动作赛，画面承担项目演出。",box16:"三轴、实体按键和项目图标。",ageNote:"动作窗口、组合和角色分工递增。",replay:"项目池、顺序、规则变体和团队目标变化。",nintendo:"《Nintendo Switch 运动》＋《超级马力欧派对》。",change:"做成自有硬件能力展示杯赛，不设淘汰。"}
+    ];
+
+    const copy = {
+      en: {
+        pageTitle:"Projector × Audio Story Box · Minigame Decision Atlas",
+        heroTitle:"Minigames belong inside the story—not between chapters.",
+        heroDescription:"Explore 30 story interactions, 20 standalone games, and one companion-growth layer. Filter by the kind of fun, then compare devices, ages, readiness, and decision scores.",
+        stats:["Story interactions","Standalone games","Play patterns"], tabs:["All","Story interactions","Standalone games"],
+        search:"Search games, mechanics, or Nintendo references", more:"More filters", less:"Fewer filters", clear:"Clear filters",
+        result:n=>`Showing <strong id="visibleCount">${n}</strong> of 50 · Highest scores first`,
+        deviceNotes:["Projector: full 1024×576 projection","Audio Story Box: fixed 16×16 matrix"],
+        growthTitle:"Companion growth spans every game", growthDescription:"The existing bear, rabbit, tiger, camel, and otter companions grow through shared experiences—without hunger meters, daily chores, XP bars, or absence penalties.",
+        growthPath:"<b>Story choices<br />Co-op behavior</b><i>→</i><b>Shared experience<br />Companion memory</b><i>→</i><b>Meet → Trust<br />→ Resonance</b><i>→</i><b>Guardian<br />New responses</b>",
+        galleryTitle:"Concept gallery", galleryDescription:"Start with the play moment, then inspect implementation readiness. Each concept pairs a full Projector scene with a 16×16 Audio Story Box interpretation.",
+        empty:"No games match these filters. Try removing one condition.", allGames:"All games", growth:"Companion growth", companion:"Layer",
+        source:'This atlas uses public, official Nintendo descriptions as mechanic references only: <a href="https://www.nintendo.com/en-gb/Games/Nintendo-Switch-games/WarioWare-Move-It--2403866.html">WarioWare</a>, <a href="https://www.nintendo.com/us/whatsnew/find-your-flow-in-rhythm-heaven-groove/">Rhythm Heaven</a>, <a href="https://www.nintendo.com/us/store/products/super-mario-party-jamboree-switch/">Super Mario Party</a>, <a href="https://media.nintendo.com/snipperclips/">Snipperclips</a>, and <a href="https://www.nintendo.com/en-gb/games/oms/labo/invent.html">Nintendo Labo</a>.',
+        type:{story:"Story interaction",standalone:"Standalone game"}, players:AtlasI18n.players,
+        device:{both:"Both platforms",projector:"Projector",box:"Audio Box"}, ageSuffix:"ages",
+        selected:"Selected", compare:"Compare", selectOne:"Select 1 more", compareCount:n=>`Compare ${n} ideas`,
+        viewDetails:title=>`View details for ${title}`, imageAlt:title=>`${title} concept for Projector and Audio Story Box`,
+        detailImageAlt:title=>`${title} dual-device concept`, headings:["Core loop","Age scaling","Replay variables","Nintendo reference","Our adaptation","Decision score"],
+        boxHeading:"Audio Story Box · 16×16", compareTitle:"Candidate comparison", tenSecond:"10-second play", projectorHeading:"Projector · full projection",
+        options:{
+          device:[["all","All devices"],["projector","Projector · projection"],["box","Audio Box · 16×16"],["both","Cross-device priority"]],
+          age:[["all","All ages"],["3-5","Ages 3–5"],["6-8","Ages 6–8"],["9-12","Ages 9–12"]],
+          players:[["all","All player modes"],["solo","Solo"],["coop","Co-op"],["versus","Versus"]],
+          impact:[["all","All story impact"],["场景动作","Scene action"],["路线分支","Route branch"],["关键结果","Key outcome"],["独立游戏","Standalone game"]],
+          maturity:[["all","All readiness"],["已有","Existing work"],["输入基础","Input foundation"],["概念方案","Concept design"],["新想法","New idea"]],
+          capability:[["all","All capability levels"],["当前可做","Buildable now"],["能力扩展","Capability extension"],["长期方向","Long-term direction"]]
+        }
+      },
+      zh: {
+        pageTitle:"Projector × Audio Story Box · 小游戏决策地图", heroTitle:"小游戏，不是故事播放中途的一道题。",
+        heroDescription:"这张地图把 30 个故事互动、20 个独立小游戏和伙伴成长层放在同一视野里。先按乐趣筛选，再看设备、年龄和实现基础；默认把综合评分较高的方案放在前面。",
+        stats:["故事互动","独立游戏","核心乐趣"], tabs:["全部","故事互动","独立游戏"], search:"搜索玩法、机制或任天堂参考", more:"更多筛选", less:"收起筛选", clear:"清除筛选",
+        result:n=>`显示 <strong id="visibleCount">${n}</strong> / 50 项 · 综合评分从高到低`, deviceNotes:["Projector：1024×576 完整投影","Audio Story Box：固定 16×16 点阵"],
+        growthTitle:"伙伴成长是跨游戏层", growthDescription:"同事已有的熊、兔、虎、骆驼和水獭伙伴，通过共同经历成长；不做饥饿值、每日喂养、经验条或不登录惩罚。",
+        growthPath:"<b>故事选择<br />合作行为</b><i>→</i><b>共同经历<br />伙伴记忆</b><i>→</i><b>Meet → Trust<br />→ Resonance</b><i>→</i><b>Guardian<br />新回应</b>",
+        galleryTitle:"概念图库", galleryDescription:"先看玩法瞬间，再看实现基础；每张分镜左侧是完整投影，右侧是 16×16 Audio Story Box。",
+        empty:"没有符合当前条件的玩法。可以减少一项筛选条件。", allGames:"全部玩法", growth:"跨游戏成长层", companion:"伙伴",
+        source:'本地图只使用任天堂官方公开玩法说明作为参考入口：<a href="https://www.nintendo.com/en-gb/Games/Nintendo-Switch-games/WarioWare-Move-It--2403866.html">《瓦力欧制造》</a>、<a href="https://www.nintendo.com/us/whatsnew/find-your-flow-in-rhythm-heaven-groove/">《节奏天国》</a>、<a href="https://www.nintendo.com/us/store/products/super-mario-party-jamboree-switch/">《超级马力欧派对》</a>、<a href="https://media.nintendo.com/snipperclips/">《你裁我剪！斯尼帕》</a>、<a href="https://www.nintendo.com/en-gb/games/oms/labo/invent.html">《Nintendo Labo》</a>。',
+        type:{story:"故事互动",standalone:"独立游戏"}, players:{solo:"单人",coop:"合作",versus:"对战"}, device:{both:"双平台",projector:"Projector",box:"Audio Box"}, ageSuffix:"岁",
+        selected:"已选", compare:"对比", selectOne:"再选 1 项", compareCount:n=>`比较 ${n} 项`, viewDetails:title=>`查看 ${title} 详情`, imageAlt:title=>`${title} 的 Projector 与 Audio Story Box 玩法分镜`, detailImageAlt:title=>`${title} 的双设备玩法分镜`,
+        headings:["核心循环","年龄变化","重玩变量","任天堂参考","我们的变化","决策评分"], boxHeading:"Audio Story Box · 16×16", compareTitle:"候选对比", tenSecond:"10 秒玩法", projectorHeading:"Projector · 完整投影",
+        options:{
+          device:[["all","全部设备"],["projector","Projector · 投影"],["box","Audio Box · 16×16"],["both","双平台优先"]], age:[["all","全部年龄"],["3-5","3–5 岁"],["6-8","6–8 岁"],["9-12","9–12 岁"]],
+          players:[["all","全部人数"],["solo","单人"],["coop","合作"],["versus","对战"]], impact:[["all","全部故事影响"],["场景动作","场景动作"],["路线分支","路线分支"],["关键结果","关键结果"],["独立游戏","独立游戏"]],
+          maturity:[["all","全部成熟度"],["已有","已有成果"],["输入基础","输入基础"],["概念方案","概念方案"],["新想法","新想法"]], capability:[["all","全部能力层级"],["当前可做","当前可做"],["能力扩展","需要能力扩展"],["长期方向","长期方向"]]
+        }
+      }
+    };
+    let locale = (() => { try { return localStorage.getItem("atlas-language") === "zh" ? "zh" : "en"; } catch { return "en"; } })();
+    const state = { type:"all", search:"", age:"all", device:"all", players:"all", impact:"all", maturity:"all", capability:"all", category:"all" };
+    const map = document.getElementById("map");
+    const drawer = document.getElementById("drawer");
+    const backdrop = document.getElementById("backdrop");
+    const growth = document.getElementById("growth");
+    const compared = new Set();
+    let activeItem = null;
+
+    function localized(item) { return locale === "en" ? AtlasI18n.englishItem(item) : item; }
+    function matches(item, ignoreCategory = false) {
+      const translated = AtlasI18n.englishItem(item);
+      const haystack = [item.id,item.title,item.category,item.pitch,item.loop,item.nintendo,item.change,item.maturity,item.capability,translated.title,translated.category,translated.pitch,translated.nintendo].join(" ").toLowerCase();
+      if (state.type !== "all" && item.type !== state.type) return false;
+      if (state.search && !haystack.includes(state.search.toLowerCase())) return false;
+      if (state.age !== "all" && !item.age.includes(state.age)) return false;
+      if (state.device === "both" && !item.device.includes("both")) return false;
+      if (["projector","box"].includes(state.device) && !item.device.includes(state.device)) return false;
+      if (state.players !== "all" && !item.players.includes(state.players)) return false;
+      if (state.impact !== "all" && item.impact !== state.impact) return false;
+      if (state.maturity !== "all") {
+        if (state.maturity === "已有" && !/(已有|可玩)/.test(item.maturity)) return false;
+        if (state.maturity !== "已有" && !item.maturity.includes(state.maturity)) return false;
+      }
+      if (state.capability !== "all" && item.capability !== state.capability) return false;
+      if (!ignoreCategory && state.category !== "all" && state.category !== "growth" && item.category !== state.category) return false;
+      return true;
+    }
+
+    function playerLabel(value) { return copy[locale].players[value] || value; }
+    function typeLabel(value) { return copy[locale].type[value]; }
+    function imagePath(item) { return `assets/concepts/${item.id.toLowerCase()}.webp`; }
+    function categoryColor(item) { return (categories.find(([name]) => name === item.category) || [null,"#ee5a3a"])[1]; }
+    function deviceLabel(item) {
+      if (item.device.includes("both")) return copy[locale].device.both;
+      return item.device.includes("projector") && item.device.includes("box") ? copy[locale].device.both : item.device.includes("projector") ? copy[locale].device.projector : copy[locale].device.box;
+    }
+    function ageLabel(item) { return locale === "en" ? `Ages ${item.age[0].split("-")[0]}–${item.age[item.age.length - 1].split("-")[1]}` : `${item.age[0].split("-")[0]}–${item.age[item.age.length - 1].split("-")[1]} 岁`; }
+
+    function renderCategoryNav(baseVisible) {
+      const nav = document.getElementById("categoryNav");
+      const rows = [["all",copy[locale].allGames,baseVisible.length], ...categories.map(([name]) => [name,locale === "en" ? AtlasI18n.category[name][0] : name,baseVisible.filter(item => item.category === name).length])];
+      nav.innerHTML = rows.map(([value,label,count]) => `<button data-category="${value}" class="${state.category === value ? "active" : ""}"><span>${label}</span><em>${count}</em></button>`).join("") + `<button class="growth-link ${state.category === "growth" ? "active" : ""}" data-category="growth"><span>${copy[locale].growth}</span><em>${copy[locale].companion}</em></button>`;
+    }
+
+    function renderMap() {
+      const baseVisible = items.filter(item => matches(item, true));
+      const visible = items.filter(item => matches(item)).sort((a,b) => b.score - a.score || a.id.localeCompare(b.id));
+      document.getElementById("resultSummary").innerHTML = copy[locale].result(visible.length);
+      renderCategoryNav(baseVisible);
+      growth.classList.toggle("open", state.category === "growth");
+      map.style.display = state.category === "growth" ? "none" : "grid";
+      document.getElementById("empty").style.display = state.category !== "growth" && !visible.length ? "block" : "none";
+      if (state.category === "growth") return;
+      map.innerHTML = visible.map((raw,index) => { const item = localized(raw); return `<article class="game-card" style="--card-color:${categoryColor(raw)};animation-delay:${Math.min(index*25,180)}ms">
+        <button class="card-open" data-id="${raw.id}" aria-label="${copy[locale].viewDetails(item.title)}">
+          <figure class="concept"><img src="${imagePath(raw)}" loading="lazy" alt="${copy[locale].imageAlt(item.title)}" /><span class="visual-label projector">Projector · 1024×576</span><span class="visual-label box">Audio Box · 16×16</span></figure>
+          <div class="card-body"><div class="card-kicker"><span>${item.category} · ${typeLabel(raw.type)}</span><span class="card-score">${raw.score} / 100</span></div><h3>${item.title}</h3><p class="card-pitch">${item.pitch}</p><div class="card-meta"><span>${deviceLabel(raw)}</span><span>${ageLabel(raw)}</span><span>${raw.players.map(playerLabel).join(" / ")}</span><span>${item.maturity}</span><span>${item.capability}</span></div></div>
+        </button>
+        <button class="compare-toggle ${compared.has(raw.id) ? "selected" : ""}" data-compare="${raw.id}" aria-pressed="${compared.has(raw.id)}">${compared.has(raw.id) ? copy[locale].selected : copy[locale].compare}</button>
+      </article>`; }).join("");
+    }
+
+    function openDrawer(id) {
+      const raw = items.find(item => item.id === id);
+      if (!raw) return;
+      activeItem = raw;
+      const item = localized(raw);
+      document.getElementById("detailId").textContent = `${raw.id} · ${typeLabel(raw.type)} · ${item.category}`;
+      document.getElementById("detailTitle").textContent = item.title;
+      const detailImage = document.getElementById("detailImage");
+      detailImage.src = imagePath(raw); detailImage.alt = copy[locale].detailImageAlt(item.title);
+      document.getElementById("detailPitch").textContent = item.pitch; document.getElementById("detailLoop").textContent = item.loop; document.getElementById("detailProjector").textContent = item.projector;
+      document.getElementById("boxHeading").textContent = copy[locale].boxHeading; document.getElementById("detailBox").textContent = item.box16; document.getElementById("detailAge").textContent = item.ageNote;
+      document.getElementById("detailReplay").textContent = item.replay; document.getElementById("detailNintendo").textContent = item.nintendo; document.getElementById("detailChange").textContent = item.change; document.getElementById("detailScore").textContent = raw.score;
+      document.getElementById("detailTags").innerHTML = [item.impact, ...raw.age.map(v=>locale === "en" ? `Ages ${v}` : `${v} 岁`), ...raw.players.map(playerLabel), item.maturity, item.capability].map(tag => `<span class="tag">${tag}</span>`).join("");
+      document.getElementById("metrics").innerHTML = (locale === "en" ? AtlasI18n.metrics : ["好玩程度", "故事融合", "重玩价值", "规则清晰", "双平台适配"]).map((label,index) => `<div class="metric"><span>${label}</span><div class="metric-track"><div class="metric-fill" style="--metric:${raw.ratings[index]*20}%"></div></div><b>${raw.ratings[index]}</b></div>`).join("");
+      drawer.classList.add("open"); backdrop.classList.add("open"); drawer.setAttribute("aria-hidden","false");
+      document.body.style.overflow = "hidden";
+      document.getElementById("close").focus();
+    }
+
+    function closeDrawer() {
+      drawer.classList.remove("open"); backdrop.classList.remove("open"); drawer.setAttribute("aria-hidden","true");
+      document.body.style.overflow = "";
+    }
+
+    function toggleCompare(id) {
+      if (compared.has(id)) compared.delete(id);
+      else if (compared.size < 3) compared.add(id);
+      updateCompareBar();
+      map.querySelectorAll("[data-compare]").forEach(button => {
+        const selected = compared.has(button.dataset.compare);
+        button.classList.toggle("selected", selected);
+        button.setAttribute("aria-pressed", String(selected));
+        button.textContent = selected ? copy[locale].selected : copy[locale].compare;
+      });
+    }
+
+    function updateCompareBar() {
+      const selected = [...compared].map(id => items.find(item => item.id === id)).filter(Boolean);
+      document.getElementById("compareBar").classList.toggle("open", selected.length > 0);
+      document.getElementById("compareSelection").innerHTML = selected.map(raw => { const item = localized(raw); return `<div class="compare-chip"><img src="${imagePath(raw)}" alt="" /><span>${item.title}</span></div>`; }).join("");
+      const action = document.getElementById("openCompare");
+      action.disabled = selected.length < 2;
+      action.textContent = selected.length < 2 ? copy[locale].selectOne : copy[locale].compareCount(selected.length);
+    }
+
+    function openCompare() {
+      const selected = [...compared].map(id => items.find(item => item.id === id)).filter(Boolean);
+      if (selected.length < 2) return;
+      const labels = locale === "en" ? AtlasI18n.metrics : ["好玩程度", "故事融合", "重玩价值", "规则清晰", "双平台适配"];
+      document.getElementById("compareGrid").innerHTML = selected.map(raw => { const item = localized(raw); return `<article class="compare-card"><img src="${imagePath(raw)}" alt="${copy[locale].detailImageAlt(item.title)}" /><div class="compare-card-body"><h3>${item.title}</h3><div class="card-meta"><span>${raw.score} / 100</span><span>${item.maturity}</span><span>${item.capability}</span></div><div class="compare-fact"><b>${copy[locale].tenSecond}</b><p>${item.pitch}</p></div><div class="compare-fact"><b>${copy[locale].projectorHeading}</b><p>${item.projector}</p></div><div class="compare-fact"><b>${copy[locale].boxHeading}</b><p>${item.box16}</p></div>${labels.map((label,index) => `<div class="metric"><span>${label}</span><div class="metric-track"><div class="metric-fill" style="width:${raw.ratings[index]*20}%"></div></div><b>${raw.ratings[index]}</b></div>`).join("")}</div></article>`; }).join("");
+      document.getElementById("compareOverlay").classList.add("open");
+      document.getElementById("compareOverlay").setAttribute("aria-hidden","false");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeCompare() {
+      document.getElementById("compareOverlay").classList.remove("open");
+      document.getElementById("compareOverlay").setAttribute("aria-hidden","true");
+      document.body.style.overflow = "";
+    }
+
+    function setOptions(id, rows) {
+      const select = document.getElementById(id);
+      const selected = state[id];
+      select.innerHTML = rows.map(([value,label]) => `<option value="${value}">${label}</option>`).join("");
+      select.value = selected;
+    }
+
+    function applyLanguage() {
+      const c = copy[locale];
+      document.documentElement.lang = locale === "en" ? "en" : "zh-CN";
+      document.title = c.pageTitle;
+      document.getElementById("heroTitle").textContent = c.heroTitle;
+      document.getElementById("heroDescription").textContent = c.heroDescription;
+      document.querySelectorAll("#heroStats span").forEach((node,index) => node.textContent = c.stats[index]);
+      document.querySelectorAll("#typeTabs button").forEach((node,index) => node.textContent = c.tabs[index]);
+      document.getElementById("search").placeholder = c.search;
+      document.getElementById("search").setAttribute("aria-label", c.search);
+      setOptions("device", c.options.device); setOptions("age", c.options.age); setOptions("players", c.options.players); setOptions("impact", c.options.impact); setOptions("maturity", c.options.maturity); setOptions("capability", c.options.capability);
+      const advanced = document.getElementById("advancedToggle");
+      advanced.textContent = advanced.getAttribute("aria-expanded") === "true" ? c.less : c.more;
+      document.getElementById("reset").textContent = c.clear;
+      document.getElementById("deviceNotes").innerHTML = c.deviceNotes.map(note => `<span>${note}</span>`).join("");
+      document.getElementById("growthTitle").textContent = c.growthTitle; document.getElementById("growthDescription").textContent = c.growthDescription;
+      document.querySelector(".growth-path").innerHTML = c.growthPath;
+      document.getElementById("galleryTitle").textContent = c.galleryTitle; document.getElementById("galleryDescription").textContent = c.galleryDescription;
+      document.getElementById("empty").textContent = c.empty; document.getElementById("sourceNote").innerHTML = c.source;
+      ["loopHeading","ageHeading","replayHeading","nintendoHeading","changeHeading","scoreHeading"].forEach((id,index) => document.getElementById(id).textContent = c.headings[index]);
+      document.getElementById("compareTitle").textContent = c.compareTitle;
+      document.getElementById("drawer").setAttribute("aria-label", locale === "en" ? "Game details" : "玩法详情");
+      document.getElementById("close").setAttribute("aria-label", locale === "en" ? "Close details" : "关闭详情");
+      document.getElementById("closeCompare").setAttribute("aria-label", locale === "en" ? "Close comparison" : "关闭对比");
+      document.querySelectorAll("#languageSwitch button").forEach(button => button.classList.toggle("active", button.dataset.lang === locale));
+      renderMap(); updateCompareBar();
+      if (drawer.classList.contains("open") && activeItem) openDrawer(activeItem.id);
+      if (document.getElementById("compareOverlay").classList.contains("open")) openCompare();
+    }
+
+    document.getElementById("typeTabs").addEventListener("click", event => {
+      const button = event.target.closest("button"); if (!button) return;
+      state.type = button.dataset.value;
+      document.querySelectorAll("#typeTabs button").forEach(el => el.classList.toggle("active", el === button));
+      renderMap();
+    });
+    map.addEventListener("click", event => {
+      const compare = event.target.closest("[data-compare]");
+      if (compare) { toggleCompare(compare.dataset.compare); return; }
+      const card = event.target.closest(".card-open");
+      if (card) openDrawer(card.dataset.id);
+    });
+    document.getElementById("categoryNav").addEventListener("click", event => {
+      const button = event.target.closest("[data-category]"); if (!button) return;
+      state.category = button.dataset.category;
+      renderMap();
+    });
+    document.getElementById("advancedToggle").addEventListener("click", event => {
+      const next = event.currentTarget.getAttribute("aria-expanded") !== "true";
+      event.currentTarget.setAttribute("aria-expanded", String(next));
+      event.currentTarget.textContent = next ? copy[locale].less : copy[locale].more;
+      document.getElementById("advancedFilters").classList.toggle("open", next);
+    });
+    document.getElementById("languageSwitch").addEventListener("click", event => {
+      const button = event.target.closest("[data-lang]"); if (!button) return;
+      locale = button.dataset.lang;
+      try { localStorage.setItem("atlas-language", locale); } catch {}
+      applyLanguage();
+    });
+    document.getElementById("search").addEventListener("input", event => { state.search = event.target.value.trim(); renderMap(); });
+    ["age","device","players","impact","maturity","capability"].forEach(id => document.getElementById(id).addEventListener("change", event => { state[id] = event.target.value; renderMap(); }));
+    document.getElementById("reset").addEventListener("click", () => {
+      Object.assign(state,{type:"all",search:"",age:"all",device:"all",players:"all",impact:"all",maturity:"all",capability:"all",category:"all"});
+      document.getElementById("search").value = "";
+      ["age","device","players","impact","maturity","capability"].forEach(id => document.getElementById(id).value = "all");
+      document.querySelectorAll("#typeTabs button").forEach(el => el.classList.toggle("active", el.dataset.value === "all"));
+      renderMap();
+    });
+    document.getElementById("close").addEventListener("click", closeDrawer);
+    backdrop.addEventListener("click", closeDrawer);
+    document.getElementById("openCompare").addEventListener("click", openCompare);
+    document.getElementById("closeCompare").addEventListener("click", closeCompare);
+    document.getElementById("compareOverlay").addEventListener("click", event => { if (event.target.id === "compareOverlay") closeCompare(); });
+    document.addEventListener("keydown", event => { if (event.key === "Escape") { closeDrawer(); closeCompare(); } });
+    applyLanguage();
+  </script>
+</body>
+</html>
