@@ -16,6 +16,7 @@ function makeElement(id = "") {
     id,
     dataset: {},
     style: {},
+    hidden: false,
     scrollTop: 0,
     focusCount: 0,
     isConnected: true,
@@ -33,6 +34,11 @@ function makeElement(id = "") {
       if (this.id === "detail-heading") elements.get("drawer").scrollTop = 999;
     },
     querySelector(selector) { return selector === "h2" ? this._heading : makeElement(); },
+    matches(selector) {
+      const match = selector.match(/^\[data-([^\]]+)\]$/);
+      const key = match?.[1].replace(/-([a-z])/g, (_, letter) => letter.toUpperCase());
+      return Boolean(key && this.dataset[key] !== undefined);
+    },
     setAttribute() {},
     _listeners: listeners
   };
@@ -107,6 +113,27 @@ function clickDetail(kind, id, opener = makeElement(`${kind}-opener`)) {
   return opener;
 }
 
+function switchLanguage(lang) {
+  element("languageSwitch")._listeners.click({
+    target: { closest() { return { dataset: { lang } }; } }
+  });
+}
+
+function clickEmbeddedVisualFromMarkup(markup, id) {
+  const visual = markup.match(new RegExp(`<button class="embedded-mechanism"[^>]*data-open-game="${id}"[\\s\\S]*?<\\/button>`))?.[0];
+  assert.ok(visual, `expected generated embedded visual link for ${id}`);
+  const opener = makeElement(`embedded-${id}`);
+  opener.dataset.openGame = id;
+  documentListeners.click({
+    target: {
+      closest(selector) {
+        return selector === "[data-open-game]" ? opener : null;
+      }
+    }
+  });
+  return opener;
+}
+
 function closeDrawerWithEscape() {
   documentListeners.keydown({ key: "Escape" });
 }
@@ -170,4 +197,77 @@ test("closing tolerates a disconnected opener", () => {
   opener.isConnected = false;
   assert.doesNotThrow(closeDrawerWithEscape);
   assert.equal(element("drawer").classList.contains("open"), false);
+});
+
+test("ST20 embedded games expose S14 and S09 concept visuals as game links", () => {
+  switchLanguage("en");
+  clickDetail("story", "ST20");
+  const markup = element("drawerContent").innerHTML;
+
+  assert.match(markup, /<button[^>]+class="embedded-mechanism"[^>]+data-open-game="S14"/);
+  assert.match(markup, /<img[^>]+src="assets\/concepts\/s14\.webp"[^>]+loading="lazy"[^>]+data-concept-image/);
+  assert.match(markup, /S14[^<]*(Find the Caller|寻找发声者)/);
+  assert.match(markup, /Find the Caller/);
+  assert.match(markup, /寻找发声者/);
+  assert.match(markup, /<button[^>]+class="embedded-mechanism"[^>]+data-open-game="S09"/);
+  assert.match(markup, /<img[^>]+src="assets\/concepts\/s09\.webp"[^>]+loading="lazy"[^>]+data-concept-image/);
+  assert.match(markup, /S09[^<]*(Character Chorus|角色合唱)/);
+  assert.match(markup, /Character Chorus/);
+  assert.match(markup, /角色合唱/);
+  assert.doesNotMatch(markup, /<span class="tag">S(?:14|09)<\/span>/);
+  closeDrawerWithEscape();
+});
+
+test("clicking the generated ST20 S14 visual opens its game detail at the top", () => {
+  switchLanguage("en");
+  clickDetail("story", "ST20");
+  const storyMarkup = element("drawerContent").innerHTML;
+  element("drawer").scrollTop = 360;
+
+  const opener = clickEmbeddedVisualFromMarkup(storyMarkup, "S14");
+  assert.equal(opener.dataset.openGame, "S14");
+  assertFocusedDetailAtTop();
+  assert.match(element("drawerContent").innerHTML, /^<img class="detail-image" src="assets\/concepts\/s14\.webp"/);
+  closeDrawerWithEscape();
+});
+
+test("Chinese embedded captions put Chinese first and English second, and broken images stay linked", () => {
+  switchLanguage("zh");
+  clickDetail("story", "ST20");
+  const markup = element("drawerContent").innerHTML;
+  const visual = markup.match(/<button class="embedded-mechanism"[^>]*data-open-game="S14"[\s\S]*?<\/button>/)?.[0] || "";
+  const chineseIndex = visual.indexOf("寻找发声者");
+  const englishIndex = visual.indexOf("Find the Caller");
+
+  assert.ok(chineseIndex >= 0, "Chinese mechanism name should be present");
+  assert.ok(englishIndex > chineseIndex, "English mechanism name should follow Chinese");
+  const brokenImage = makeElement("broken-concept-image");
+  brokenImage.dataset.conceptImage = "";
+  documentListeners.error({ target: brokenImage });
+  assert.equal(brokenImage.hidden, true);
+  assert.match(visual, /class="embedded-mechanism-caption"[\s\S]*寻找发声者/);
+  assert.match(visual, /data-open-game="S14"/);
+  closeDrawerWithEscape();
+  switchLanguage("en");
+});
+
+test("an embedded game with two mechanisms renders two side-by-side visual links", () => {
+  clickDetail("story", "ST10");
+  const markup = element("drawerContent").innerHTML;
+  const gameMarkup = markup.match(/<article class="game-detail">[\s\S]*?<\/article>/)?.[0] || "";
+
+  assert.equal((gameMarkup.match(/class="embedded-mechanism"/g) || []).length, 2);
+  assert.match(gameMarkup, /data-open-game="S16"[\s\S]*?assets\/concepts\/s16\.webp/);
+  assert.match(gameMarkup, /data-open-game="S18"[\s\S]*?assets\/concepts\/s18\.webp/);
+  closeDrawerWithEscape();
+});
+
+test("embedded mechanism CSS preserves two columns on mobile and exposes interaction states", () => {
+  const css = fs.readFileSync(path.join(repoRoot, "assets/atlas.css"), "utf8");
+  assert.match(css, /\.embedded-mechanisms\.mechanisms-2\{grid-template-columns:repeat\(2,minmax\(0,1fr\)\)\}/);
+  const mobileCss = css.slice(css.indexOf("@media(max-width:760px)"));
+  assert.doesNotMatch(mobileCss, /embedded-mechanisms\.mechanisms-2/);
+  assert.match(css, /\.embedded-mechanism:focus-visible/);
+  assert.match(css, /\.embedded-mechanism:hover/);
+  assert.match(css, /\.embedded-mechanism:active/);
 });
