@@ -7,25 +7,44 @@ const vm = require("node:vm");
 
 const elements = new Map();
 const documentListeners = {};
+let activeElement = null;
 
 function makeElement(id = "") {
   const listeners = {};
   const classes = new Set();
-  return {
+  const element = {
     id,
     dataset: {},
     style: {},
     scrollTop: 0,
+    focusCount: 0,
     addEventListener(type, listener) { listeners[type] = listener; },
     classList: {
       add(name) { classes.add(name); },
       remove(name) { classes.delete(name); },
       toggle(name, force) { force ? classes.add(name) : classes.delete(name); }
     },
-    querySelector() { return makeElement(); },
+    focus(options) {
+      this.focusCount += 1;
+      this.focusOptions = options;
+      activeElement = this;
+      if (this.id === "detail-heading") elements.get("drawer").scrollTop = 999;
+    },
+    querySelector(selector) { return selector === "h2" ? this._heading : makeElement(); },
     setAttribute() {},
     _listeners: listeners
   };
+  Object.defineProperty(element, "innerHTML", {
+    get() { return this._innerHTML || ""; },
+    set(value) {
+      this._innerHTML = value;
+      if (value.includes("<h2")) {
+        this._heading = makeElement("detail-heading");
+        this._heading.tabIndex = value.includes('<h2 tabindex="-1"') ? -1 : 0;
+      }
+    }
+  });
+  return element;
 }
 
 function element(id) {
@@ -47,6 +66,7 @@ const modeButtons = ["stories", "games", "compare"].map(mode => {
 const document = {
   body: makeElement("body"),
   documentElement: makeElement("html"),
+  get activeElement() { return activeElement; },
   getElementById: element,
   addEventListener(type, listener) { documentListeners[type] = listener; },
   querySelectorAll(selector) {
@@ -81,27 +101,39 @@ function clickDetail(kind, id) {
   });
 }
 
-test("opening detail content resets the drawer to the top", () => {
+function assertFocusedDetailAtTop() {
+  const heading = element("drawerContent").querySelector("h2");
+  assert.equal(heading.tabIndex, -1);
+  assert.equal(document.activeElement, heading);
+  assert.equal(heading.focusOptions.preventScroll, true);
+  assert.equal(element("drawer").scrollTop, 0);
+}
+
+test("opening detail content focuses its heading and resets the drawer to the top", () => {
   element("drawer").scrollTop = 180;
   clickDetail("story", "ST01");
-  assert.equal(element("drawer").scrollTop, 0);
+  assertFocusedDetailAtTop();
 });
 
-test("cross-navigation resets the drawer to the top", () => {
+test("cross-navigation focuses each new heading and resets the drawer to the top", () => {
   element("drawer").scrollTop = 240;
   clickDetail("game", "S01");
-  assert.equal(element("drawer").scrollTop, 0);
+  assertFocusedDetailAtTop();
 
   element("drawer").scrollTop = 300;
   clickDetail("story", "ST01");
-  assert.equal(element("drawer").scrollTop, 0);
+  assertFocusedDetailAtTop();
 });
 
-test("language switching preserves the current drawer position", () => {
+test("language switching preserves scroll without moving focus", () => {
   clickDetail("game", "S01");
   element("drawer").scrollTop = 420;
+  languageButtons[1].focus();
+  const focusedBeforeSwitch = document.activeElement;
   element("languageSwitch")._listeners.click({
     target: { closest() { return { dataset: { lang: "zh" } }; } }
   });
   assert.equal(element("drawer").scrollTop, 420);
+  assert.equal(document.activeElement, focusedBeforeSwitch);
+  assert.equal(element("drawerContent").querySelector("h2").focusCount, 0);
 });
