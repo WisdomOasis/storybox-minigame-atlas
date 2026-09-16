@@ -47,10 +47,28 @@ for (const story of stories) {
 assert.deepEqual([...gameIds].filter(id => !referencedGames.has(id)), [], "Every S/G item needs at least one applicable story");
 
 const repoRoot = path.resolve(__dirname, "..");
+const storyCoverDir = path.join(repoRoot, "assets", "stories");
+const storyCoverManifestPath = path.join(storyCoverDir, "manifest.json");
+
+assert.ok(fs.existsSync(storyCoverManifestPath), "Story cover prompt manifest is missing");
+const storyCoverManifest = JSON.parse(fs.readFileSync(storyCoverManifestPath, "utf8"));
+assert.equal(storyCoverManifest.length, 50, "Story cover manifest must contain exactly 50 entries");
+assert.deepEqual(storyCoverManifest.map(item => item.id), stories.map(item => item.id), "Story cover manifest IDs must match story order");
+
+for (const story of stories) {
+  const filename = `${story.id.toLowerCase()}.webp`;
+  assert.ok(fs.existsSync(path.join(storyCoverDir, filename)), `${story.id} cover is missing`);
+}
+
 for (const file of ["index.html", "assets/atlas-app.js", "assets/story-data.js"]) {
   const contents = fs.readFileSync(path.join(repoRoot, file), "utf8");
   assert.equal(contents.includes("32×32"), false, `${file} must not mention 32×32`);
 }
+const atlasApp = fs.readFileSync(path.join(repoRoot, "assets", "atlas-app.js"), "utf8");
+assert.ok(atlasApp.includes("function storyCoverSrc"), "Atlas must derive story cover paths from story IDs");
+assert.ok((atlasApp.match(/story-cover/g) || []).length >= 3, "Story covers must appear in cards, details, and comparisons");
+const atlasCss = fs.readFileSync(path.join(repoRoot, "assets", "atlas.css"), "utf8");
+assert.ok(atlasCss.includes(".story-cover"), "Story cover layout styles are missing");
 const markdown = fs.readFileSync("/Users/gunsmoker/Documents/Obsidian Vault/小游戏产品库/50 个经典故事互动与小游戏映射.md", "utf8");
 assert.ok(markdown.includes("## 50 个故事总览"), "The Obsidian review document is missing");
 assert.equal((markdown.match(/^### ST\d{2}/gm) || []).length, 34, "Markdown must contain 24 embedded-game entries and 10 pilot entries");
