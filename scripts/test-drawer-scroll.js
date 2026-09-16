@@ -18,9 +18,11 @@ function makeElement(id = "") {
     style: {},
     scrollTop: 0,
     focusCount: 0,
+    isConnected: true,
     addEventListener(type, listener) { listeners[type] = listener; },
     classList: {
       add(name) { classes.add(name); },
+      contains(name) { return classes.has(name); },
       remove(name) { classes.delete(name); },
       toggle(name, force) { force ? classes.add(name) : classes.delete(name); }
     },
@@ -90,15 +92,23 @@ for (const file of ["assets/story-data.js", "assets/game-data.js", "assets/atlas
   vm.runInContext(fs.readFileSync(path.join(repoRoot, file), "utf8"), context, { filename: file });
 }
 
-function clickDetail(kind, id) {
+function clickDetail(kind, id, opener = makeElement(`${kind}-opener`)) {
+  const datasetKey = `open${kind[0].toUpperCase()}${kind.slice(1)}`;
+  opener.dataset[datasetKey] = id;
+  opener.focus();
   documentListeners.click({
     target: {
       closest(selector) {
-        if (selector === `[data-open-${kind}]`) return { dataset: { [`open${kind[0].toUpperCase()}${kind.slice(1)}`]: id } };
+        if (selector === `[data-open-${kind}]`) return opener;
         return null;
       }
     }
   });
+  return opener;
+}
+
+function closeDrawerWithEscape() {
+  documentListeners.keydown({ key: "Escape" });
 }
 
 function assertFocusedDetailAtTop() {
@@ -113,6 +123,7 @@ test("opening detail content focuses its heading and resets the drawer to the to
   element("drawer").scrollTop = 180;
   clickDetail("story", "ST01");
   assertFocusedDetailAtTop();
+  closeDrawerWithEscape();
 });
 
 test("cross-navigation focuses each new heading and resets the drawer to the top", () => {
@@ -123,6 +134,7 @@ test("cross-navigation focuses each new heading and resets the drawer to the top
   element("drawer").scrollTop = 300;
   clickDetail("story", "ST01");
   assertFocusedDetailAtTop();
+  closeDrawerWithEscape();
 });
 
 test("language switching preserves scroll without moving focus", () => {
@@ -136,4 +148,26 @@ test("language switching preserves scroll without moving focus", () => {
   assert.equal(element("drawer").scrollTop, 420);
   assert.equal(document.activeElement, focusedBeforeSwitch);
   assert.equal(element("drawerContent").querySelector("h2").focusCount, 0);
+  closeDrawerWithEscape();
+});
+
+test("Escape restores the original opener after related cross-navigation", () => {
+  const originalOpener = makeElement("original-opener");
+  clickDetail("story", "ST01", originalOpener);
+
+  const relatedLink = makeElement("related-link");
+  clickDetail("game", "S01", relatedLink);
+  closeDrawerWithEscape();
+
+  assert.equal(document.activeElement, originalOpener);
+  assert.equal(originalOpener.focusCount, 2);
+  assert.equal(originalOpener.focusOptions.preventScroll, true);
+  assert.equal(relatedLink.focusCount, 1);
+});
+
+test("closing tolerates a disconnected opener", () => {
+  const opener = clickDetail("story", "ST01");
+  opener.isConnected = false;
+  assert.doesNotThrow(closeDrawerWithEscape);
+  assert.equal(element("drawer").classList.contains("open"), false);
 });
